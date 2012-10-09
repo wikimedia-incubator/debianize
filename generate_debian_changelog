@@ -1,0 +1,247 @@
+#!/usr/bin/env perl
+# 
+#
+# git2deblogs   --  An utility to keep your git logs in sync with your debian/changelog
+#
+use strict;
+use warnings;
+use Data::Dumper;
+use JSON::XS;
+use Carp;
+#
+# This script creates a debian changelog.
+#
+# Assumptions: 1) all tags are made from commits on master.
+#              2) there is at least one commit per tag(will fix this later, but it's quite common)
+#
+
+# For example, this will be the output of get_tag_info()
+#  {
+#    'name' => '0.1',
+#    'end' => '7e03f97de1d2d87a16eca5dc1240047f47251092',
+#    'start' => '823b3b7ad417a0e239dd78517b95d9518978abe4'
+#  },
+#  {
+#    'name' => '0.2',
+#    'end' => 'ce14a505b1fa81aafdd6b8dae835e94aa75fa800',
+#    'start' => 'f7a8da68a020b55bf0da33fe22b8fe05eaaef279'
+#  },
+#  {
+#    'name' => '0.3',
+#    'end' => 'be7ba49d5e97dca14263f3753e9540ac02effac4',
+#    'start' => '50596c9b6b7ae9d499ca280189914545680906aa'
+#  },
+#  {
+#    'name' => '0.4',
+#    'end' => 'e17f11f68f207949d2daf73e360b11d0dcf69e33',
+#    'start' => '92b0cb425113799d5812e92dd25c60246316a881'
+#  }
+#  
+
+# For reference, this is the
+# output of  git rev-list 0.4 | tac -
+# (so commits, before and including 0.4)
+#
+# 823b3b7ad417a0e239dd78517b95d9518978abe4  \
+# 3676cce39aa7f554f5c309186791e14a3e61c617  |
+# 80b18c9c9ff83aa484e6d391c4a8effaece811d0  |=> 0.1
+# de1912460962b2aa099657e870cca8597ec14c75  |
+# 7e03f97de1d2d87a16eca5dc1240047f47251092  /
+# f7a8da68a020b55bf0da33fe22b8fe05eaaef279  \
+# bdd23196579bf19ab4faff8d240a67b53b5f25f6  |
+# 68d252a5f4a6f5203f1f6df16f215b4e2ed932fb  |=> 0.2
+# 44b59ec597ec5ab8798b039996357e9c636f2b84  |
+# ce14a505b1fa81aafdd6b8dae835e94aa75fa800  /
+# 50596c9b6b7ae9d499ca280189914545680906aa  \
+# 3298cf12d901973d5bce0fefe84caf58d2154de8  |
+# bfe848f66eb5f74bc65f741a82ee5ca4cb44f962  |=> 0.3
+# 9f743af1a849bfc44fb6c51584336463c51f4a95  |
+# be7ba49d5e97dca14263f3753e9540ac02effac4  /
+# 92b0cb425113799d5812e92dd25c60246316a881  \
+# af5c5a0d5146e118d2a8f28b062fa1466014ef67  |=> 0.4
+# d6c4a2473a6cbf897cb61b70eb2edf8f9a18e14a  |
+# e17f11f68f207949d2daf73e360b11d0dcf69e33  /
+
+
+
+##############################################################
+# get tag information like name, start comming hash, end commit hash
+##############################################################
+sub get_tag_info {
+# get all tag names in an array
+
+  my @tags;
+  my @tag_names    = split /\n/,`git tag`;
+
+  # all the commit hashes of the latest tag(containing all the commit hashes of all the tags)
+  my $all_tag_cmd = "git rev-list ".$tag_names[-1];
+
+  # in chronological order, all the commits of the latest tag
+  my @all_tag_commits = reverse split /\n/,`$all_tag_cmd`;
+
+  # also in chronological order, tag end commits
+  my @tag_end_commits = map { `git rev-list $_ | head -1` =~ /^([^\n]+)/  } @tag_names;
+
+  push @tags, {
+    name  => $tag_names[0],
+    start => $all_tag_commits[0],
+    end   => $tag_end_commits[0],
+  };
+
+
+
+  #iterate through $tag_names
+  my $t = 0;
+  #iterate through $all_tag_commits
+  my $a = 0;
+
+  while($t < @tag_names) {
+
+    while($a < @all_tag_commits) {
+      last if
+        $all_tag_commits[$a] eq
+        $tags[$t]->{end};
+      $a++;
+    };
+
+    $t++;
+    last if $t >= @tag_names;
+    $tags[$t] = {
+      name  => $tag_names[$t],
+      start => $all_tag_commits[$a+1],
+      end   => $tag_end_commits[$t],
+    };
+
+  };
+
+  return @tags;
+};
+
+
+
+##############################################################
+# git_log_to_array(..) will return an array with commits from git-log output
+##############################################################
+sub git_log_to_array {
+  my (@params) = @_;
+  my $git_log_cmd =  "git  log --reverse --pretty=format:'{%n \"commit\": \"%H\", %n  \"author\": \"%an <%ae>\",%n  \"date\": \"%ad\",%n  \"message\": \"%s\"%n},'";
+
+  if(@params == 2) {
+    $git_log_cmd.=" $params[0] $params[1]";
+  } elsif( @params == 1) {
+    $git_log_cmd.=" -1 $params[0]";
+  } else {
+    croak "Wrong number of params";
+  };
+
+
+  my $git_log_output =  `$git_log_cmd`;
+  $git_log_output=~s/},\s*$/}/;
+  #print $git_log_output;
+  #exit 0;
+
+  $git_log_output=~s/^/  /gmxs; # indent output
+  $git_log_output = "{ \"commits\": [ $git_log_output ] }"; # wrap it up in some braces so it's valud json
+
+
+  # commit messages containing quotes will have their quotes escaped by this
+  $git_log_output =~ s["message": ..(.*?).$ ] {
+    my $val = $1;
+    $val =~ s/"/\\"/g;
+
+    # some characters that cause problems(quickfix for now)
+    $val =~ s/-/ /g;
+    $val =~ s/\(/ /g;
+    $val =~ s/\)/ /g;
+    "\"message\": \"$val\"";
+  }eisxgms;
+
+
+  # take newlines out of author
+  $git_log_output =~ s["author": (.*?)$ ] {
+    my $val = $1;
+    $val =~ s/\n/ /g;
+    "\"author\": $val";
+  }eisxgms;
+
+
+  #print $git_log_output;
+  #exit 0;
+  #print "$git_log_output";
+  #exit 0;
+  my $json_log = decode_json($git_log_output);
+  return $json_log->{commits};
+};
+
+
+# add some commit messages to current version
+sub dch_append_commit {
+  my ($message) = @_;
+  `dch -a "$message"`;
+};
+
+
+# create a new version ( for new tag )
+sub dch_create_new_version {
+  my ($version,$mdate) = @_;
+
+  `DEBCHANGE_TZ="echo -e \"$mdate\"" dch --newversion "$version" "Created new $version from tag $version";`
+};
+
+##############################################################
+# dch_init_changelog will 
+# 1) backup current changelog
+# 2) create a brand new changelog
+# 3) go over all tags and add data from the git log and sync it with the debian/changelog
+#
+# Warning: only use this for the first time you want to make the changelog
+
+sub dch_init_changelog {
+  my ($package_name) = @_;
+  my @tags = get_tag_info();
+  my $backup_timestamp = `date +%m-%d-%y_%H-%M-%S`;
+  chomp $backup_timestamp; 
+
+
+  `mv debian/changelog debian_changelog_$backup_timestamp`;
+  `dch --create -v 0.0.1 --package "$package_name" "Created package";`;
+
+  # iterate over all tags
+  for my $tag (@tags) {
+    print "Sync-ing commits for $tag->{name} ... \n";
+    #get the commits for that tag(only the ones made between the last tag and this one)
+
+    my $tag_commits;
+
+    if($tag->{start} ne $tag->{end}) {
+      $tag_commits = git_log_to_array($tag->{start},$tag->{end});
+    } else {
+      $tag_commits = git_log_to_array($tag->{start});
+    };
+
+
+
+    # find date of end commit and tell dch to put that in the maintainer line(it makes one for each version)
+    my @end_commits = grep { $_->{commit} eq $tag->{end} } @$tag_commits;
+    my $maintainer_date = $end_commits[0]->{date};
+    print "maintainer_date=$maintainer_date\n";
+
+
+
+    # create a new version in the changelog
+    dch_create_new_version($tag->{name},$maintainer_date);
+
+    for my $commit(@$tag_commits) {
+      # add each commit of the tag to the debian/changelog
+      my $changelog_message = "$commit->{message} [ $commit->{author} ]";
+
+      print "changelog_msg=$changelog_message\n";
+      dch_append_commit($changelog_message);
+    };
+  };
+}
+
+
+dch_init_changelog("udp-filters");
+
+
