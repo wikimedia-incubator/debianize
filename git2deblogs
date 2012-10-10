@@ -14,6 +14,12 @@ use Carp;
 # Assumptions: 1) all tags are made from commits on master.
 #              2) there is at least one commit per tag(will fix this later, but it's quite common)
 #
+#
+# TODO: add switches for verbosity
+# TODO: add switch to group commits by author  name
+# TODO: add switch to just get the latest commits and not regenerate the whole thing from scratch
+#
+#
 
 # For example, this will be the output of get_tag_info()
 #  {
@@ -127,7 +133,7 @@ sub git_log_to_array {
   my $git_log_cmd =  "git  log --reverse --pretty=format:'{%n \"commit\": \"%H\", %n  \"author\": \"%an <%ae>\",%n  \"date\": \"%ad\",%n  \"message\": \"%s\"%n},'";
 
   if(@params == 2) {
-    $git_log_cmd.=" $params[0] $params[1]";
+    $git_log_cmd.=" $params[0]..$params[1]";
   } elsif( @params == 1) {
     $git_log_cmd.=" -1 $params[0]";
   } else {
@@ -185,7 +191,7 @@ sub dch_append_commit {
 sub dch_create_new_version {
   my ($version,$mdate) = @_;
 
-  `DEBCHANGE_TZ="echo -e \"$mdate\"" dch --newversion "$version" "Created new $version from tag $version";`
+  `DEBCHANGE_TZ="$mdate" dch --newversion "$version" "Created new $version from tag $version";`
 };
 
 ##############################################################
