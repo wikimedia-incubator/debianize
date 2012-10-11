@@ -18,7 +18,8 @@ use Carp;
 # TODO: add switches for verbosity
 # TODO: add switch to group commits by author  name
 # TODO: add switch to just get the latest commits and not regenerate the whole thing from scratch
-#
+# 
+# BUG: seems to be missing the very first commit message(need to fix this)
 #
 
 # For example, this will be the output of get_tag_info()
@@ -140,6 +141,7 @@ sub git_log_to_array {
   my (@params) = @_;
   my $git_log_cmd =  "git  log --reverse --pretty=format:'{%n \"commit\": \"%H\", %n  \"author\": \"%an <%ae>\",%n  \"date\": \"%ad\",%n  \"message\": \"%s\"%n},'";
 
+
   if(@params == 2) {
     $git_log_cmd.=" $params[0]..$params[1]";
   } elsif( @params == 1) {
@@ -148,6 +150,7 @@ sub git_log_to_array {
     croak "Wrong number of params";
   };
 
+  print "$git_log_cmd\n";
 
   my $git_log_output =  `$git_log_cmd`;
   $git_log_output=~s/},\s*$/}/;
@@ -250,12 +253,21 @@ sub dch_init_changelog {
       my $changelog_message = "$commit->{message} [ $commit->{author} ]";
 
       print "changelog_msg=$changelog_message\n";
+      print Dumper $tag;
+      print $commit->{commit};
+      exit 0;
       dch_append_commit($changelog_message);
     };
   };
 }
 
 
-dch_init_changelog("udp-filters");
+my $opt_pkgname = `basename \`pwd\``;
+chomp $opt_pkgname;
+$opt_pkgname = "\"$opt_pkgname\"";
+
+print "$opt_pkgname\n";
+
+dch_init_changelog($opt_pkgname);
 
 
