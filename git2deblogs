@@ -155,7 +155,6 @@ sub git_log_to_array {
   my $git_log_output =  `$git_log_cmd`;
   $git_log_output=~s/},\s*$/}/;
   #print $git_log_output;
-  #exit 0;
 
   $git_log_output=~s/^/  /gmxs; # indent output
   $git_log_output = "{ \"commits\": [ $git_log_output ] }"; # wrap it up in some braces so it's valud json
@@ -253,9 +252,6 @@ sub dch_init_changelog {
       my $changelog_message = "$commit->{message} [ $commit->{author} ]";
 
       print "changelog_msg=$changelog_message\n";
-      print Dumper $tag;
-      print $commit->{commit};
-      exit 0;
       dch_append_commit($changelog_message);
     };
   };
