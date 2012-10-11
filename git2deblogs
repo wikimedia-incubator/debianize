@@ -83,7 +83,9 @@ sub get_tag_info {
   #     \d+.\d+.\d+
   #     etc
 
-  my @tag_names    = split /\n/,`git tag | perl -ne '/\d+(?:\.\d+)?/ && print'`;
+  my @tag_names    = 
+    grep { /\d+(?:\.\d+)?/ } 
+    split /\n/,`git tag`;
 
   # all the commit hashes of the latest tag(containing all the commit hashes of all the tags)
   my $all_tag_cmd = "git rev-list ".$tag_names[-1];
