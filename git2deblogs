@@ -11,8 +11,13 @@ use Carp;
 #
 # This script creates a debian changelog.
 #
-# Assumptions: 1) all tags are made from commits on master.
+# There are some assumptions made and listed below.
+# This script should only be used if you agree with these assumptions:
+#
+#              1) all tags are made from commits on master.
 #              2) there is at least one commit per tag(will fix this later, but it's quite common)
+#              3) the first tag begins with the first commit
+#              4) you number your tags with common version numbers
 #
 #
 # TODO: add switches for verbosity
@@ -95,10 +100,10 @@ sub get_tag_info {
   # all the commit hashes of the latest tag(containing all the commit hashes of all the tags)
   my $all_tag_cmd = "git rev-list ".$tag_names[-1];
 
-  # in chronological order, all the commits of the latest tag
+  # commit hashes in chronological order, all the commits of the latest tag
   my @all_tag_commits = reverse split /\n/,`$all_tag_cmd`;
 
-  # also in chronological order, tag end commits
+  # commit hashes also in chronological order <== only the tag end commits specifically
   my @tag_end_commits = map { `git rev-list $_ | head -1` =~ /^([^\n]+)/  } @tag_names;
 
   push @tags, {
@@ -109,28 +114,25 @@ sub get_tag_info {
 
 
 
-  #iterate through $tag_names
-  my $t = 0;
+  #iterate through $tag_names ( start at 1 because we already processed one tag just above )
+  my $t = 1;
   #iterate through $all_tag_commits
   my $a = 0;
-
   while($t < @tag_names) {
+    # find next end commit in @all_tag_commits
+    while($all_tag_commits[$a++] ne $tag_end_commits[$t-1]){};
 
-    while($a < @all_tag_commits) {
-      last if
-        $all_tag_commits[$a] eq
-        $tags[$t]->{end};
-      $a++;
-    };
 
-    $t++;
-    last if $t >= @tag_names;
-    $tags[$t] = {
+    push @tags, {
       name  => $tag_names[$t],
-      start => $all_tag_commits[$a+1],
+      start => $all_tag_commits[$a-1],
       end   => $tag_end_commits[$t],
     };
 
+    croak "assert previous end equals current start failed [t=$t]" if
+      $t !=0 &&
+      $tags[$t]->{start} ne $tags[$t-1]->{end};
+    $t++;
   };
 
   return @tags;
@@ -223,11 +225,15 @@ sub dch_init_changelog {
   chomp $backup_timestamp; 
 
 
-  `mv debian/changelog debian_changelog_$backup_timestamp`;
+  # backup changelog if it already exists
+  if(-f "debian/changelog") {
+    `mv debian/changelog debian_changelog_$backup_timestamp`;
+  };
   `dch --create -v 0.0.1 --package "$package_name" "Created package";`;
 
   # iterate over all tags
-  for my $tag (@tags) {
+  for my $tag_idx (0..(-1+@tags)) {
+    my $tag = $tags[$tag_idx];
     print "Sync-ing commits for $tag->{name} ... \n";
     #get the commits for that tag(only the ones made between the last tag and this one)
 
@@ -251,10 +257,18 @@ sub dch_init_changelog {
     # create a new version in the changelog
     dch_create_new_version($tag->{name},$maintainer_date);
 
+    # fixup because first commit is missed
+    if($tag_idx == 0) {
+      my @retval = git_log_to_array($tag->{start});
+      my $commit = @{$retval[0]}[0];
+      my $changelog_message = "$commit->{message} [ $commit->{author} ]";
+      print "changelog_msg=$changelog_message\n";
+      dch_append_commit($changelog_message);
+    };
+
     for my $commit(@$tag_commits) {
       # add each commit of the tag to the debian/changelog
       my $changelog_message = "$commit->{message} [ $commit->{author} ]";
-
       print "changelog_msg=$changelog_message\n";
       dch_append_commit($changelog_message);
     };

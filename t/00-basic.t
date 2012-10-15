@@ -56,5 +56,5 @@ ok($commit_counts[$_] == 1,"commit $_ is supposed to be present 1 time")
  
 
 
-#`rm -rf $repo_temp_path`;
-#done_testing;
+# Cleanup
+`rm -rf $repo_temp_path`;
