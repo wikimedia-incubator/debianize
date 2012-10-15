@@ -88,6 +88,10 @@ sub get_tag_info {
     grep { /\d+(?:\.\d+)?/ } 
     split /\n/,`git tag`;
 
+  if(@tag_names == 0) {
+    croak "Error: Please make some tags like \"0.1.3\"."
+  };
+
   # all the commit hashes of the latest tag(containing all the commit hashes of all the tags)
   my $all_tag_cmd = "git rev-list ".$tag_names[-1];
 
@@ -147,7 +151,7 @@ sub git_log_to_array {
   } elsif( @params == 1) {
     $git_log_cmd.=" -1 $params[0]";
   } else {
-    croak "Wrong number of params";
+    croak "Error: Wrong number of params to git_log_to_array";
   };
 
   print "$git_log_cmd\n";
