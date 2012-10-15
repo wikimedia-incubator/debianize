@@ -26,7 +26,35 @@ sub total_tags_found_in_changelog {
   return $tag_0_1 + $tag_0_2 + $tag_0_3 + $tag_0_4;
 }
 
+sub total_commits_found_in_changelog {
+  # commit messages in the test-repo git repository are like
+  # "1 commit"
+  # "2 commit"
+  # ...
+  # 
+  # but "10 commit" is two times (under 2 different commits)
+  # 
+  my @commit_counts = (0,map {
+    my $count = `grep "\ $_ commit" ./$repo_temp_path/debian/changelog | wc -l`;
+    chomp $count;
+    $count;
+  } 1..18);
+
+  return @commit_counts;
+}
 
 ok(total_tags_found_in_changelog()==4,"all tags present in debian/changelog");
-`rm -rf $repo_temp_path`;
+my @commit_counts = total_commits_found_in_changelog();
+
+# Checking commit counts
+ok($commit_counts[$_] == 1,"commit $_ is supposed to be present 1 time")
+  for 1..9;
+ok($commit_counts[10] == 2,"commit 10 is supposed to be present 2 times");
+
+ok($commit_counts[$_] == 1,"commit $_ is supposed to be present 1 time")
+  for 11..18;
+ 
+
+
+#`rm -rf $repo_temp_path`;
 #done_testing;
