@@ -1,5 +1,10 @@
 #/bin/bash
 
+# "set -e" will cause bash to exit with an error on any simple command.
+# "set -o pipefail" will cause bash to exit with an error on any command in a pipeline as well.
+set -e
+set -o pipefail
+
 if [ -z "$DEBFULLNAME" ]
 	then export DEBFULLNAME="Diederik van Liere"
 fi
@@ -8,7 +13,6 @@ VERSION=`git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' 
 MAIN_VERSION=`git describe --abbrev=0`
 
 PACKAGE=${PWD##*/}
-#PACKAGE=`echo $PACKAGE | sed -e "s/-/_/ig"`
 echo 'Building package for ' + $PACKAGE
 
 tar -cvf $PACKAGE.tar --exclude-from=exclude .
