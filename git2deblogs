@@ -18,13 +18,22 @@ use Carp;
 #              2) there is at least one commit per tag(will fix this later, but it's quite common)
 #              3) the first tag begins with the first commit
 #              4) you number your tags with common version numbers
+#              5) the maintainer of the package for a specific version is the person who made the tag
+# 
 #
-#
-# TODO: add switches for verbosity
+# 
+# 
+# TODO: read more docs about git commits and find out if they are specific to a branch. look into using   git log --branches= if that is the case
+#       (otherwise mention as an assumption that we assume we only process all tags made on master branch)
+# TODO: add switches for verbosity that will show any external command run with all its parameters
 # TODO: add switch to group commits by author  name
 # TODO: add switch to just get the latest commits and not regenerate the whole thing from scratch
+# TODO: drop dch altogether and write code that will do the same things as its doing(calling dch to update the changelog or create a new version
+#       is proving to cause some massive delays)
+#
 # 
 # BUG: seems to be missing the very first commit message(need to fix this)
+# BUG: on webstatscollector one of the commits shows up just with the name on it
 #
 
 # For example, this will be the output of get_tag_info()
@@ -90,7 +99,7 @@ sub get_tag_info {
   #     etc
 
   my @tag_names    = 
-    grep { /\d+(?:\.\d+)?/ } 
+    grep { /^\d+(?:\.\d+)?$/ } 
     split /\n/,`git tag`;
 
   if(@tag_names == 0) {
@@ -120,8 +129,8 @@ sub get_tag_info {
   my $a = 0;
   while($t < @tag_names) {
     # find next end commit in @all_tag_commits
-    while($all_tag_commits[$a++] ne $tag_end_commits[$t-1]){};
 
+    while($a+1 < @all_tag_commits && $all_tag_commits[$a++] ne $tag_end_commits[$t-1]){};
 
     push @tags, {
       name  => $tag_names[$t],
@@ -129,7 +138,12 @@ sub get_tag_info {
       end   => $tag_end_commits[$t],
     };
 
-    croak "assert previous end equals current start failed [t=$t]" if
+
+    # here we check if the previous tag end is equal to the current one's start.
+    # actually when you run  git log commit_hash1..commit_hash2 , this will give you the results
+    # of the first commit after commit_hash1 up to commit_hash2 , so that's why we need this.
+    #
+    croak "assert previous tag end equals current tag start failed [t=$t]" if
       $t !=0 &&
       $tags[$t]->{start} ne $tags[$t-1]->{end};
     $t++;
@@ -198,17 +212,76 @@ sub git_log_to_array {
 
 # add some commit messages to current version
 sub dch_append_commit {
-  my ($message) = @_;
-  `dch -a "$message"`;
+  my ($commit) = @_;
+
+  my ($author_name) = $commit->{author} =~ /^\s*(.*?)</;
+  my $commit_message = $commit->{message};
+
+  `NAME="$author_name" dch -a "$commit_message"`;
 };
 
 
 # create a new version ( for new tag )
 sub dch_create_new_version {
   my ($version,$mdate) = @_;
+  my $env_vars = "";
 
-  `DEBCHANGE_TZ="$mdate" dch --newversion "$version" "Created new $version from tag $version";`
+  if($mdate) {
+    $env_vars .= "DEBCHANGE_TZ=\"$mdate\"";
+  };
+  `$env_vars dch --newversion "$version" "Created new $version from tag $version";`
 };
+
+
+
+sub dch_add_maintainer_details {
+  my ($tag_name) = @_;
+  # what this command does is, it ignores the "date -R" command inside dch
+  # and it lets you decide the date you want to appear in the changelog
+  # as well as the email and name of the maintainer
+  #
+  # this function should be run after all the commits in that tag have been added.
+  # this is because 
+
+  my $git_show_output = `git show $tag_name | head -3 | tail -2`;
+
+  my $cmd_template = q{TZ='\"\";echo \"[MAINTAINER_TAG_CREATION_DATE]\"; #' EMAIL="[MAINTAINER_EMAIL]"  NAME="[MAINTAINER_NAME]" dch -a "[MAINTAINER_TAG_MESSAGE]";};
+  my $cmd_rendered = $cmd_template;
+
+  my $maintainer = {
+    date        => "",
+    email       => "",
+    name        => "",
+    tag_message => "",
+  };
+
+  ($maintainer->{date}   )  = $git_show_output =~              /Date:\s*(.*)$/;
+  ($maintainer->{name}   )  = $git_show_output =~     /Tagger:\s+([^<]*)</gxms;
+  ($maintainer->{email}  )  = $git_show_output =~  /Tagger:[^<]*?<(.*?)>$/gxms;
+  $maintainer->{message}    =              "Tag created for version $tag_name";
+
+  #fix date(convert from "git show" format to debian/changelog format
+  #
+  #format that you get from git => Tue Oct 9 16:35:46 2012 +0300
+  #good format                  => Tue, 16 Oct 2012 09:41:14 +0300
+
+  $maintainer->{date} =~ s/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+)/$1, $3 $2 $5 $4/;
+
+  warn "git_show_output=[$git_show_output]";
+  warn "date =".$maintainer->{date} ;
+  warn "name =".$maintainer->{name} ;
+  warn "email=".$maintainer->{email};
+
+  $cmd_rendered =~ s/\[MAINTAINER_TAG_CREATION_DATE\]/$maintainer->{date}/;
+  $cmd_rendered =~ s/\[MAINTAINER_EMAIL\]/$maintainer->{email}/;
+  $cmd_rendered =~ s/\[MAINTAINER_NAME\]/$maintainer->{name}/;
+  $cmd_rendered =~ s/\[MAINTAINER_TAG_MESSAGE\]/$maintainer->{message}/;
+
+
+  #print "$cmd_rendered";
+
+  `$cmd_rendered`;
+}
 
 ##############################################################
 # dch_init_changelog will 
@@ -220,6 +293,8 @@ sub dch_create_new_version {
 
 sub dch_init_changelog {
   my ($package_name) = @_;
+
+  # get all the tags that conform to common versioning schemes
   my @tags = get_tag_info();
   my $backup_timestamp = `date +%m-%d-%y_%H-%M-%S`;
   chomp $backup_timestamp; 
@@ -227,7 +302,10 @@ sub dch_init_changelog {
 
   # backup changelog if it already exists
   if(-f "debian/changelog") {
-    `mv debian/changelog debian_changelog_$backup_timestamp`;
+    `
+    mkdir changelog_backup/;
+    mv debian/changelog changelog_backup/debian_changelog_$backup_timestamp;
+    `;
   };
   `dch --create -v 0.0.1 --package "$package_name" "Created package";`;
 
@@ -245,17 +323,8 @@ sub dch_init_changelog {
       $tag_commits = git_log_to_array($tag->{start});
     };
 
-
-
-    # find date of end commit and tell dch to put that in the maintainer line(it makes one for each version)
-    my @end_commits = grep { $_->{commit} eq $tag->{end} } @$tag_commits;
-    my $maintainer_date = $end_commits[0]->{date};
-    print "maintainer_date=$maintainer_date\n";
-
-
-
     # create a new version in the changelog
-    dch_create_new_version($tag->{name},$maintainer_date);
+    dch_create_new_version($tag->{name});
 
     # fixup because first commit is missed
     if($tag_idx == 0) {
@@ -263,15 +332,17 @@ sub dch_init_changelog {
       my $commit = @{$retval[0]}[0];
       my $changelog_message = "$commit->{message} [ $commit->{author} ]";
       print "changelog_msg=$changelog_message\n";
-      dch_append_commit($changelog_message);
+      dch_append_commit($commit);
     };
 
     for my $commit(@$tag_commits) {
       # add each commit of the tag to the debian/changelog
       my $changelog_message = "$commit->{message} [ $commit->{author} ]";
       print "changelog_msg=$changelog_message\n";
-      dch_append_commit($changelog_message);
+      dch_append_commit($commit);
     };
+
+    dch_add_maintainer_details($tag->{name});
   };
 }
 
@@ -284,4 +355,4 @@ print "$opt_pkgname\n";
 
 dch_init_changelog($opt_pkgname);
 
-
+#dch_add_maintainer_details("0.1");
