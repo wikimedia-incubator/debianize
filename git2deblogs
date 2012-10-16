@@ -99,8 +99,9 @@ sub get_tag_info {
   #     etc
 
   my @tag_names    = 
-    grep { /^\d+(?:\.\d+)?$/ } 
+    grep { /^\d+(?:(?:\.\d+)+)$/ } 
     split /\n/,`git tag`;
+
 
   if(@tag_names == 0) {
     croak "Error: Please make some tags like \"0.1.3\"."
