@@ -210,7 +210,9 @@ sub git_log_to_array {
 };
 
 
+##############################################################
 # add some commit messages to current version
+##############################################################
 sub dch_append_commit {
   my ($commit) = @_;
 
@@ -221,44 +223,56 @@ sub dch_append_commit {
 };
 
 
-# create a new version ( for new tag )
-sub dch_create_new_version {
-  my ($version,$mdate) = @_;
-  my $env_vars = "";
-
-  if($mdate) {
-    $env_vars .= "DEBCHANGE_TZ=\"$mdate\"";
-  };
-  `$env_vars dch --newversion "$version" "Created new $version from tag $version";`
-};
-
-
-
-sub dch_add_maintainer_details {
+##############################################################
+# Get the data associated with the person who made the tag
+##############################################################
+sub get_tag_creation_commit_data {
   my ($tag_name) = @_;
-  # what this command does is, it ignores the "date -R" command inside dch
-  # and it lets you decide the date you want to appear in the changelog
-  # as well as the email and name of the maintainer
-  #
-  # this function should be run after all the commits in that tag have been added.
-  # this is because 
 
   my $git_show_output = `git show $tag_name | head -3 | tail -2`;
-
-  my $cmd_template = q{TZ='\"\";echo \"[MAINTAINER_TAG_CREATION_DATE]\"; #' EMAIL="[MAINTAINER_EMAIL]"  NAME="[MAINTAINER_NAME]" dch -a "[MAINTAINER_TAG_MESSAGE]";};
-  my $cmd_rendered = $cmd_template;
-
-  my $maintainer = {
+  #warn "git_show_output=[$git_show_output]";
+  my $commit = {
     date        => "",
     email       => "",
     name        => "",
     tag_message => "",
   };
 
-  ($maintainer->{date}   )  = $git_show_output =~              /Date:\s*(.*)$/;
-  ($maintainer->{name}   )  = $git_show_output =~     /Tagger:\s+([^<]*)</gxms;
-  ($maintainer->{email}  )  = $git_show_output =~  /Tagger:[^<]*?<(.*?)>$/gxms;
-  $maintainer->{message}    =              "Tag created for version $tag_name";
+  ($commit->{date}   )  = $git_show_output =~              /Date:\s*(.*)$/;
+  ($commit->{name}   )  = $git_show_output =~     /Tagger:\s+([^<]*)</gxms;
+  ($commit->{email}  )  = $git_show_output =~  /Tagger:[^<]*?<(.*?)>$/gxms;
+  $commit->{message}    =              "Tag created for version $tag_name";
+
+  return $commit;
+}
+
+##############################################################
+# create a new version ( for new tag )
+##############################################################
+sub dch_create_new_version {
+  my ($tag_name) = @_;
+
+  my $maintainer = get_tag_creation_commit_data($tag_name);
+
+  `NAME="$maintainer->{name}" dch --newversion "$tag_name" "Created new $tag_name from tag $tag_name";`
+};
+
+
+##############################################################
+##############################################################
+sub dch_add_maintainer_details {
+  my ($tag_name) = @_;
+  # what this command does is, it ignores the "date -R" command inside dch
+  # and it lets you decide the date you want to appear in the changelog
+  # as well as the email and name of the maintainer(all of which are taken from the git repo)
+  #
+  # this function should be run after all the commits in that tag have been added.
+  # this is because 
+
+  my $cmd_template = q{TZ='\"\";echo \"[MAINTAINER_TAG_CREATION_DATE]\"; #' EMAIL="[MAINTAINER_EMAIL]"  NAME="[MAINTAINER_NAME]" dch -a "[MAINTAINER_TAG_MESSAGE]";};
+  my $cmd_rendered = $cmd_template;
+
+  my $maintainer = get_tag_creation_commit_data($tag_name);
 
   #fix date(convert from "git show" format to debian/changelog format
   #
@@ -267,10 +281,9 @@ sub dch_add_maintainer_details {
 
   $maintainer->{date} =~ s/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+)/$1, $3 $2 $5 $4/;
 
-  warn "git_show_output=[$git_show_output]";
-  warn "date =".$maintainer->{date} ;
-  warn "name =".$maintainer->{name} ;
-  warn "email=".$maintainer->{email};
+  #warn "date =".$maintainer->{date} ;
+  #warn "name =".$maintainer->{name} ;
+  #warn "email=".$maintainer->{email};
 
   $cmd_rendered =~ s/\[MAINTAINER_TAG_CREATION_DATE\]/$maintainer->{date}/;
   $cmd_rendered =~ s/\[MAINTAINER_EMAIL\]/$maintainer->{email}/;
@@ -290,6 +303,7 @@ sub dch_add_maintainer_details {
 # 3) go over all tags and add data from the git log and sync it with the debian/changelog
 #
 # Warning: only use this for the first time you want to make the changelog
+##############################################################
 
 sub dch_init_changelog {
   my ($package_name) = @_;
