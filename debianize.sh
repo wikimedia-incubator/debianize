@@ -40,7 +40,7 @@ fi
 echo 'Building package for '$PACKAGE
 
 
-VERSION=`git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' `
+VERSION=`     git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' `
 MAIN_VERSION=`git describe --abbrev=0`
 
 
@@ -60,7 +60,7 @@ rm ${PACKAGE}_${VERSION}.orig.tar.gz  2> /dev/null || true
 
 cd $PACKAGE-${VERSION}
 
-# Replace version place holder with current versio number
+# Replace version place holder with current version number
 echo `pwd`
 echo 'Replacing version placeholders';
 

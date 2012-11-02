@@ -1,0 +1,4 @@
+#!/bin/bash
+NEW_VERSION=`git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' `
+git tag -a "$NEW_VERSION" -m "Creating tag for version $NEW_VERSION"
+

@@ -3,23 +3,70 @@ use strict;
 use warnings;
 use Test::More 'no_plan';
 use Carp;
-my $timestamp = `date +"%s"`;
-chomp $timestamp;
-my $repo_temp_path = "test-repo-$timestamp";
-`
-unzip test-repo.zip
-mv "test-repo" "$repo_temp_path/"
-cd $repo_temp_path
-ln -s ../git2deblogs
-./git2deblogs
-`;
+my $timestamp = `date +"%s"`; chomp $timestamp;
+my $mock_repo_path = "test-repo-$timestamp";
+my $mock_file_path = "A.txt";
+
+
+#
+# Generate new commit in test repo after modifying the file in it a bit
+#
+sub gen_repo_new_commit {
+  my ($message) = @_;
+  my $random1 = int(rand(99999999));
+  my $random2 = int(rand(99999999));
+  my $date    = `date +%N`;
+  `
+  echo "$date-$random1-$random2" > $mock_file_path;
+  git commit -am "$message"
+  `;
+};
+
+#
+# Generate new tag in test repo
+#
+sub gen_repo_new_tag {
+  my ($name) = @_;
+  `git tag -a "$name" -m "New tag $name"`;
+};
+
+#
+# Create a mock repo to test the git2deblogs script on
+#
+sub gen_repo {
+  `
+  mkdir $mock_repo_path;
+  cd    $mock_repo_path;
+  git init;
+  echo "TestData" > $mock_file_path;
+  `;
+  gen_repo_new_commit("$_ commit") for 1..5;
+  gen_repo_new_tag("0.1");
+  gen_repo_new_commit("$_ commit") for 6..10;
+  gen_repo_new_tag("0.2");
+  gen_repo_new_commit("$_ commit") for 10..14;
+  gen_repo_new_tag("0.3");
+  gen_repo_new_commit("$_ commit") for 15..18;
+  gen_repo_new_tag("0.4");
+  gen_repo_new_commit("$_ commit") for 19..22;
+  gen_repo_new_tag("0.4.4");
+};
+
+
+#`
+#unzip test-repo.zip
+#mv "test-repo" "$mock_repo_path/"
+#cd $mock_repo_path
+#ln -s ../git2deblogs
+#./git2deblogs
+#`;
 
 sub total_tags_found_in_changelog {
-  my $tag_0_1   = `grep "(0.1)"   ./$repo_temp_path/debian/changelog | wc -l`;
-  my $tag_0_2   = `grep "(0.2)"   ./$repo_temp_path/debian/changelog | wc -l`;
-  my $tag_0_3   = `grep "(0.3)"   ./$repo_temp_path/debian/changelog | wc -l`;
-  my $tag_0_4   = `grep "(0.4)"   ./$repo_temp_path/debian/changelog | wc -l`;
-  my $tag_0_4_4 = `grep "(0.4.4)" ./$repo_temp_path/debian/changelog | wc -l`;
+  my $tag_0_1   = `grep "(0.1)"   ./$mock_repo_path/debian/changelog | wc -l`;
+  my $tag_0_2   = `grep "(0.2)"   ./$mock_repo_path/debian/changelog | wc -l`;
+  my $tag_0_3   = `grep "(0.3)"   ./$mock_repo_path/debian/changelog | wc -l`;
+  my $tag_0_4   = `grep "(0.4)"   ./$mock_repo_path/debian/changelog | wc -l`;
+  my $tag_0_4_4 = `grep "(0.4.4)" ./$mock_repo_path/debian/changelog | wc -l`;
   chomp $tag_0_1;
   chomp $tag_0_2;
   chomp $tag_0_3;
@@ -37,13 +84,16 @@ sub total_commits_found_in_changelog {
   # but "10 commit" is two times (under 2 different commits)
   # 
   my @commit_counts = (0,map {
-    my $count = `grep "\ $_ commit" ./$repo_temp_path/debian/changelog | wc -l`;
+    my $count = `grep "\ $_ commit" ./$mock_repo_path/debian/changelog | wc -l`;
     chomp $count;
     $count;
   } 1..22);
 
   return @commit_counts;
-}
+};
+
+
+gen_repo();
 
 ok(total_tags_found_in_changelog()==5,"all tags present in debian/changelog");
 my @commit_counts = total_commits_found_in_changelog();
@@ -55,8 +105,9 @@ ok($commit_counts[10] == 2,"commit 10 is supposed to be present 2 times");
 
 ok($commit_counts[$_] == 1,"commit $_ is supposed to be present 1 time")
   for 11..22;
- 
+
+
 
 
 # Cleanup
-`rm -rf $repo_temp_path`;
+#`rm -rf $mock_repo_path`;
