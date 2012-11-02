@@ -11,14 +11,17 @@ my $mock_file_path = "A.txt";
 #
 # Generate new commit in test repo after modifying the file in it a bit
 #
+
 sub gen_repo_new_commit {
   my ($message) = @_;
   my $random1 = int(rand(99999999));
   my $random2 = int(rand(99999999));
   my $date    = `date +%N`;
+  chomp $date;
   `
+  cd $mock_repo_path;
   echo "$date-$random1-$random2" > $mock_file_path;
-  git commit -am "$message"
+  git commit -am "$message";
   `;
 };
 
@@ -27,7 +30,10 @@ sub gen_repo_new_commit {
 #
 sub gen_repo_new_tag {
   my ($name) = @_;
-  `git tag -a "$name" -m "New tag $name"`;
+  `
+  cd $mock_repo_path;
+  git tag -a "$name" -m "New tag $name"
+  `;
 };
 
 #
@@ -36,30 +42,25 @@ sub gen_repo_new_tag {
 sub gen_repo {
   `
   mkdir $mock_repo_path;
+  mkdir $mock_repo_path/debian;
   cd    $mock_repo_path;
   git init;
   echo "TestData" > $mock_file_path;
+  git add $mock_file_path;
+  git commit -am "1 commit";
   `;
-  gen_repo_new_commit("$_ commit") for 1..5;
-  gen_repo_new_tag("0.1");
+  gen_repo_new_commit("$_ commit") for 2..5;
+  gen_repo_new_tag("0.1"  );
   gen_repo_new_commit("$_ commit") for 6..10;
-  gen_repo_new_tag("0.2");
+  gen_repo_new_tag("0.2"  );
   gen_repo_new_commit("$_ commit") for 10..14;
-  gen_repo_new_tag("0.3");
+  gen_repo_new_tag("0.3"  );
   gen_repo_new_commit("$_ commit") for 15..18;
-  gen_repo_new_tag("0.4");
+  gen_repo_new_tag("0.4"  );
   gen_repo_new_commit("$_ commit") for 19..22;
   gen_repo_new_tag("0.4.4");
 };
 
-
-#`
-#unzip test-repo.zip
-#mv "test-repo" "$mock_repo_path/"
-#cd $mock_repo_path
-#ln -s ../git2deblogs
-#./git2deblogs
-#`;
 
 sub total_tags_found_in_changelog {
   my $tag_0_1   = `grep "(0.1)"   ./$mock_repo_path/debian/changelog | wc -l`;
@@ -93,7 +94,19 @@ sub total_commits_found_in_changelog {
 };
 
 
+sub run_git2deblogs {
+  `
+  cd $mock_repo_path
+  ln -s ../git2deblogs
+  ./git2deblogs
+  `;
+};
+
 gen_repo();
+run_git2deblogs();
+
+
+
 
 ok(total_tags_found_in_changelog()==5,"all tags present in debian/changelog");
 my @commit_counts = total_commits_found_in_changelog();
@@ -110,4 +123,4 @@ ok($commit_counts[$_] == 1,"commit $_ is supposed to be present 1 time")
 
 
 # Cleanup
-#`rm -rf $mock_repo_path`;
+`rm -rf $mock_repo_path`;
