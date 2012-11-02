@@ -48,5 +48,14 @@ echo ${NEW_VERSION}
 
 
 
-#git tag -a "$NEW_VERSION" -m "Creating tag for version $NEW_VERSION"
+read -r -p "Will create tag with version $NEW_VERSION. Are you sure ? [Y/n] " response
+case $response in
+    [yY][eE][sS]|[yY]) 
+        git tag -a "$NEW_VERSION" -m "Creating tag for version $NEW_VERSION";
+        exit 0;
+        ;;
+    *)
+        exit -1
+        ;;
+esac
 
