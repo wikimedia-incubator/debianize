@@ -12,14 +12,21 @@ fi
 
 
 # Determine package
-if [ $(git rev-parse --is-bare-repository) = true ]
-then
-    REPOSITORY_BASENAME=$(basename "$PWD")
-else
-    REPOSITORY_BASENAME=$(basename $(readlink -nf "$PWD"/..))
+#if [ $(git rev-parse --is-bare-repository) = true ]
+#then
+REPOSITORY_BASENAME=$(basename "$PWD")
+#else
+    #REPOSITORY_BASENAME=$(basename $(readlink -nf "$PWD"/..))
+#fi
+
+
+if [ -z "$DEBEMAIL" ]
+	then export DEBEMAIL="dvanliere@wikimedia.org"
 fi
 
-cd ..
+
+
+
 PACKAGE=${PWD##*/}
 echo REPOSITORY_BASENAME is $REPOSITORY_BASENAME
 echo PACKAGE is $PACKAGE
@@ -29,8 +36,15 @@ then
 	exit 1;
 fi
 
-git status | grep "Changed but not updated"
-if [ $? == 0 ]
+if [ `whoami` != 'root' ]; then
+  echo "Executing debianize.sh script"
+else
+  echo "Error: Executing debianize.sh as root not recommended"
+  exit 1
+fi
+
+
+if [ `git status | grep "Changed but not updated" |wc -l` == 0 ]
 then
 	echo 'Please be aware that you have uncommited changes in your git repo.'
 	echo 'Continuening with the building the Debian package means that your'
@@ -40,23 +54,36 @@ fi
 echo 'Building package for '$PACKAGE
 
 
-VERSION=`     git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' `
+# TODO: check if the project uses automake/autoconf and if so then run the following commnds
+# in order to clean stuff up
+
+#./configure;
+#make clean;
+rm -f Makefile configure;
+aclocal;
+autoconf;
+autoreconf;
+automake;
+
+LICENSE=gpl2
+FIRST_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | tail -1`
+FINAL_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | head -1`
+REMOTE_URL=`git config --get remote.origin.url  | perl -ne '@url=split /\@/,$_; print $url[1];'`
+
+VERSION=`git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' `
 MAIN_VERSION=`git describe --abbrev=0`
 
+PACKAGE=${PWD##*/}
+echo 'Building package for ' $PACKAGE
 
-tar -cvf $PACKAGE.tar --exclude-from=exclude .
+tar -cvf $PACKAGE.tar --exclude-from=exclude . >/dev/null
 mv $PACKAGE.tar ../
 cd ..
+rm -rf $PACKAGE-${VERSION}
+mkdir  $PACKAGE-${VERSION}
+tar -C $PACKAGE-${VERSION} -xvf $PACKAGE.tar >/dev/null
 
-# this file is not always present and so the absence of this file should not kill this script.
-
-rm -rf $PACKAGE-${VERSION} 2> /dev/null || true
-
-# Create a tar file of the package
-mkdir $PACKAGE-${VERSION}
-tar -C $PACKAGE-${VERSION} -xvf $PACKAGE.tar
-
-rm ${PACKAGE}_${VERSION}.orig.tar.gz  2> /dev/null || true
+rm ${PACKAGE}\_${VERSION}.orig.tar.gz  2> /dev/null || true
 
 cd $PACKAGE-${VERSION}
 
@@ -64,14 +91,37 @@ cd $PACKAGE-${VERSION}
 echo `pwd`
 echo 'Replacing version placeholders';
 
-VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' src/collector.c
+VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' `find -name "*.c" -or -name "*.h" -or -name "*.cpp" -or -name "*.h"`
+VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' configure.ac
 
 echo 'Launching package builder';
 mkdir m4
-dh_make -c gpl2 -e dvanliere@wikimedia.org -s --createorig -p $PACKAGE\_${VERSION}
+DH_MAKE_PKG_NAME=$PACKAGE\_${VERSION}
+
+
+
+#if [ ! -e "$DH_MAKE_PKG_NAME" ]; then
+  #echo "Error: archive $DH_MAKE_PKG_NAME doesn't exist"
+  #exit 2
+#else
+dh_make -c ${LICENSE} -e ${DEBEMAIL} -s --createorig -p $DH_MAKE_PKG_NAME
+#fi
+
+
+
+
+
+#wget "https://raw.github.com/wmf-analytics/debianize/master/git2deblogs" -O git2deblogs;
+#mkdir debian;
+#chmod +x git2deblogs;
+#./git2deblogs;
+
+
+
 cd debian
-rm *ex *EX
-rm README.Debian dirs
+rm *ex *EX || true
+rm -rf changelog_backup/ || true
+rm README.Debian dirs || true
 #cp ../$PACKAGE/debian/control debian/.
 #cp ../$PACKAGE/debian/rules debian/.
 #cp ../$PACKAGE/debian/copyright debian/.
@@ -79,7 +129,7 @@ rm README.Debian dirs
 #cp ../$PACKAGE/Makefile debian/.
 #cd ../$PACKAGE_${VERSION} &&
 cd ..
-dpkg-buildpackage -v${VERSION}
+dpkg-buildpackage -b #-v${VERSION}
 cd ..
 
 
@@ -105,7 +155,7 @@ PACKAGE_NAME_MAIN_VERSION=$PACKAGE\_${MAIN_VERSION}\_${ARCH_SYS}.deb
 dpkg-deb --contents ${PACKAGE_NAME_VERSION}
 echo "Currently in =>"`pwd`
 echo -e "Linting package ${PACKAGE_NAME_VERSION} ...\n"
-lintian ${PACKAGE_NAME_VERSION}
+lintian -Ivi${PACKAGE_NAME_VERSION}
 #mv ${PACKAGE_NAME_MAIN_VERSION} ${PACKAGE_NAME_VERSION}
 
 
