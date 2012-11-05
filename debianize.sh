@@ -11,7 +11,7 @@ if [ -z "$DEBFULLNAME" ]
 fi
 
 
-if [[ !-f "Makefile" ]];
+if [ !-f "Makefile" ]
   rm -f configure;
   aclocal;
   autoconf;
