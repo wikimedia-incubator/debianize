@@ -6,12 +6,12 @@ set -e
 set -o pipefail
 
 # Set env variables
-if [ -z "$DEBFULLNAME" ]
-	then export DEBFULLNAME="Diederik van Liere"
+if [ -z "$DEBFULLNAME" ]; then
+  export DEBFULLNAME="Diederik van Liere"
 fi
 
 
-if [ !-f "Makefile" ]
+if [ ! -f "Makefile" ]; then
   rm -f configure ;
   aclocal         ;
   autoconf        ;
