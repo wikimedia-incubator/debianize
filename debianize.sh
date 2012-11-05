@@ -11,6 +11,15 @@ if [ -z "$DEBFULLNAME" ]
 fi
 
 
+if [[ !-f "Makefile" ]];
+  rm -f configure;
+  aclocal;
+  autoconf;
+  autoreconf;
+  automake;
+  ./configure
+fi
+
 # Determine package
 #if [ $(git rev-parse --is-bare-repository) = true ]
 #then
@@ -59,11 +68,6 @@ echo 'Building package for '$PACKAGE
 
 #./configure;
 #make clean;
-rm -f Makefile configure;
-aclocal;
-autoconf;
-autoreconf;
-automake;
 
 LICENSE=gpl2
 FIRST_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | tail -1`
