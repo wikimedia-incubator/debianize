@@ -12,12 +12,12 @@ fi
 
 
 if [ !-f "Makefile" ]
-  rm -f configure;
-  aclocal;
-  autoconf;
-  autoreconf;
-  automake;
-  ./configure
+  rm -f configure ;
+  aclocal         ;
+  autoconf        ;
+  autoreconf      ;
+  automake        ;
+  ./configure     ;
 fi
 
 # Determine package
