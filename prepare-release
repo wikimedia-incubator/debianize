@@ -2,6 +2,10 @@
 #############################################################
 # Get latest revision depending on the last tag
 #############################################################
+
+
+# TODO: add check for verison to have just 3 numbers, truncate the rest
+# do the same in debianize.sh or make another script that just gnerates the version
 NEW_VERSION=`git describe 2>/dev/null | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' `
 if [[ -z $NEW_VERSION ]]; then
   NEW_VERSION="0.0.1";
