@@ -5,6 +5,38 @@
 set -e
 set -o pipefail
 
+
+
+DPKG_GNUPG_OPTION=""
+DPKG_DEPS_OPTION=""
+
+
+while getopts "d" optname
+  do
+    case "$optname" in
+      "d")
+        echo "[!] Debug mode ON"
+        echo "[!] Package will not be signed. Dependency check turned off"
+        DPKG_GNUPG_OPTION="-us"
+        DPKG_DEPS_OPTION="-d"
+        ;;
+      "?")
+        echo "Option not recognized $OPTARG"
+        ;;
+      ":")
+        echo "Argument missing for option $OPTARG"
+        ;;
+      *)
+      # Should not occur
+        echo "Unknown error while option processing"
+        ;;
+    esac
+  done
+
+
+
+
+
 # Set env variables
 if [ -z "$DEBFULLNAME" ]; then
   export DEBFULLNAME="Diederik van Liere"
@@ -12,7 +44,7 @@ fi
 
 
 if [ ! -f "Makefile" ]; then
-  rm -f configure ;
+  rm -f Makefile configure ;
   aclocal         ;
   autoconf        ;
   autoreconf      ;
@@ -95,13 +127,23 @@ cd $PACKAGE-${VERSION}
 echo `pwd`
 echo 'Replacing version placeholders';
 
-VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' `find -name "*.c" -or -name "*.h" -or -name "*.cpp" -or -name "*.h"`
-VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' configure.ac
+#
+# Replace version inside source files
+#
+VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' \
+                 `find -name "*.c" -or -name "*.h" -or -name "*.cpp" -or -name "*.h"`;
+
+# 
+# Replace version and package name inside configure.ac
+# 
+VERSION=$VERSION perl -pi -e 's/^VERSION=[^"]*$/VERSION=$ENV{VERSION}\n/' configure.ac;
+PACKAGE=$PACKAGE VERSION=$VERSION perl -pi -e 's/AC_INIT\(\[.*?\],\[.*?\]/AC_INIT([$ENV{PACKAGE}],[$ENV{VERSION}]/' configure.ac;
 
 echo 'Launching package builder';
 mkdir m4
 DH_MAKE_PKG_NAME=$PACKAGE\_${VERSION}
-
+echo "DH_MAKE_PKG_NAME=$DH_MAKE_PKG_NAME"
+echo "PACKAGE=$PACKAGE"
 
 
 #if [ ! -e "$DH_MAKE_PKG_NAME" ]; then
@@ -110,8 +152,6 @@ DH_MAKE_PKG_NAME=$PACKAGE\_${VERSION}
 #else
 dh_make -c ${LICENSE} -e ${DEBEMAIL} -s --createorig -p $DH_MAKE_PKG_NAME
 #fi
-
-
 
 
 
@@ -133,7 +173,18 @@ rm README.Debian dirs || true
 #cp ../$PACKAGE/Makefile debian/.
 #cd ../$PACKAGE_${VERSION} &&
 cd ..
-dpkg-buildpackage -b #-v${VERSION}
+_CURRDIR=$(basename `pwd`)
+
+# Get debian/ from development directory
+if [ "$_CURRDIR" != "$PACKAGE" ]; then
+  rm -rf debian/
+  cp -r ../$PACKAGE/debian .
+fi
+
+autoreconf;
+dpkg-buildpackage -b $DPKG_DEPS_OPTION $DPKG_GNUPG_OPTION; #-v${VERSION}
+
+exit 0;
 cd ..
 
 
