@@ -43,27 +43,23 @@ if [ -z "$DEBFULLNAME" ]; then
 fi
 
 
-if [ -z "$DEBEMAIL" ]; then 
-  export DEBEMAIL="dvanliere@wikimedia.org"
+if [ ! -f "Makefile" ]; then
+  rm -f Makefile configure ;
+  aclocal         ;
+  autoconf        ;
+  autoreconf      ;
+  automake        ;
+  ./configure     ;
 fi
 
-#if [ ! -f "Makefile" ]; then
-  #rm -f Makefile configure ;
-  #aclocal         ;
-  #autoconf        ;
-  #autoreconf      ;
-  #automake        ;
-  #./configure     ;
-#fi
-
 # Determine package
-#if [ $(git rev-parse --is-bare-repository) = true ]
-#then
+# TODO: find a canonical way to get the repository name
 REPOSITORY_BASENAME=$(basename "$PWD")
-#else
-    #REPOSITORY_BASENAME=$(basename $(readlink -nf "$PWD"/..))
-#fi
 
+
+if [ -z "$DEBEMAIL" ]
+	then export DEBEMAIL="dvanliere@wikimedia.org"
+fi
 
 
 
@@ -166,12 +162,6 @@ cd debian
 rm *ex *EX || true
 rm -rf changelog_backup/ || true
 rm README.Debian dirs || true
-#cp ../$PACKAGE/debian/control debian/.
-#cp ../$PACKAGE/debian/rules debian/.
-#cp ../$PACKAGE/debian/copyright debian/.
-#cp ../$PACKAGE/debian/changelog debian/.
-#cp ../$PACKAGE/Makefile debian/.
-#cd ../$PACKAGE_${VERSION} &&
 cd ..
 _CURRDIR=$(basename `pwd`)
 
@@ -184,7 +174,6 @@ fi
 autoreconf;
 dpkg-buildpackage -b $DPKG_DEPS_OPTION $DPKG_GNUPG_OPTION; #-v${VERSION}
 
-exit 0;
 cd ..
 
 
