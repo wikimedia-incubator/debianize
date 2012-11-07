@@ -247,15 +247,26 @@ sub get_tag_creation_commit_data {
   return $commit;
 }
 
+
+
 ##############################################################
 # create a new version ( for new tag )
+#
+# creating a new version for the package.
+# upon the first version, the changelog is being created, the 
+# changelog is being created.
 ##############################################################
 sub dch_create_new_version {
-  my ($tag_name) = @_;
+  my ($tag_name,$is_first_version,$package_name) = @_;
 
   my $maintainer = get_tag_creation_commit_data($tag_name);
 
-  `NAME="$maintainer->{name}" dch --newversion "$tag_name" "Created new $tag_name from tag $tag_name";`
+  if($is_first_version) {
+    my $cmd = qq{NAME="$maintainer->{name}" EMAIL="$maintainer->{email}"  dch --create -v $tag_name --package "$package_name" "Created new $tag_name version from tag $tag_name"};
+    `$cmd`;
+  } else {
+    `NAME="$maintainer->{name}" dch --newversion "$tag_name" "Created new $tag_name version from tag $tag_name";`
+  };
 };
 
 
@@ -322,7 +333,8 @@ sub dch_init_changelog {
     mv debian/changelog changelog_backup/debian_changelog_$backup_timestamp;
     `;
   };
-  `dch --create -v 0.0.1 --package "$package_name" "Created package";`;
+
+  my $first_version = 1;
 
   # iterate over all tags
   for my $tag_idx (0..(-1+@tags)) {
@@ -339,7 +351,7 @@ sub dch_init_changelog {
     };
 
     # create a new version in the changelog
-    dch_create_new_version($tag->{name});
+    dch_create_new_version($tag->{name},$first_version,$package_name);
 
     # fixup because first commit is missed
     if($tag_idx == 0) {
@@ -358,6 +370,7 @@ sub dch_init_changelog {
     };
 
     dch_add_maintainer_details($tag->{name});
+    $first_version = 0;
   };
 }
 

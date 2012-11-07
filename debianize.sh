@@ -43,14 +43,18 @@ if [ -z "$DEBFULLNAME" ]; then
 fi
 
 
-if [ ! -f "Makefile" ]; then
-  rm -f Makefile configure ;
-  aclocal         ;
-  autoconf        ;
-  autoreconf      ;
-  automake        ;
-  ./configure     ;
+if [ -z "$DEBEMAIL" ]; then 
+  export DEBEMAIL="dvanliere@wikimedia.org"
 fi
+
+#if [ ! -f "Makefile" ]; then
+  #rm -f Makefile configure ;
+  #aclocal         ;
+  #autoconf        ;
+  #autoreconf      ;
+  #automake        ;
+  #./configure     ;
+#fi
 
 # Determine package
 #if [ $(git rev-parse --is-bare-repository) = true ]
@@ -60,10 +64,6 @@ REPOSITORY_BASENAME=$(basename "$PWD")
     #REPOSITORY_BASENAME=$(basename $(readlink -nf "$PWD"/..))
 #fi
 
-
-if [ -z "$DEBEMAIL" ]
-	then export DEBEMAIL="dvanliere@wikimedia.org"
-fi
 
 
 
