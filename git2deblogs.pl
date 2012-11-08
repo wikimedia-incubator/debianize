@@ -290,7 +290,12 @@ sub dch_create_new_version {
 
 
 ##############################################################
+# dch_add_maintainer_details
+#
 ##############################################################
+
+
+
 sub dch_add_maintainer_details {
   my ($self,$tag_name) = @_;
   # what this command does is, it ignores the "date -R" command inside dch
@@ -393,10 +398,6 @@ sub dch_init_changelog {
 }
 
 
-###################################################
-# git2deblogs
-###################################################
-
 package main;
 use Carp;
 use Getopt::Long;
@@ -421,7 +422,8 @@ sub get_options {
 
   if(!$opt->{"generate"} && !$opt->{"update"}) {
     croak "Error: You need to specify --generate or --update";
-  };
+  };l
+
 
   #if(Email::Validate::Lite) {
   #};

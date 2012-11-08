@@ -97,8 +97,8 @@ sub total_commits_found_in_changelog {
 sub run_git2deblogs {
   `
   cd $mock_repo_path
-  ln -s ../git2deblogs
-  ./git2deblogs --generate
+  ln -s ../git2deblogs.pl
+  ./git2deblogs.pl --generate
   `;
 };
 
@@ -123,4 +123,4 @@ ok($commit_counts[$_] == 1,"commit $_ is supposed to be present 1 time")
 
 
 # Cleanup
-#`rm -rf $mock_repo_path`;
+`rm -rf $mock_repo_path`;
