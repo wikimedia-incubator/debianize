@@ -422,7 +422,7 @@ sub get_options {
 
   if(!$opt->{"generate"} && !$opt->{"update"}) {
     croak "Error: You need to specify --generate or --update";
-  };l
+  };
 
 
   #if(Email::Validate::Lite) {
