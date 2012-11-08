@@ -447,8 +447,10 @@ sub get_options {
 
   # adding RFC822PAT later,
   # this will do for the moment
-  if($opt->{"force-maintainer-email"} !~ /.*\@.*\..*/) {
-    croak "Error: Email for maintainer specified but email is not valid";
+  if($opt->{"force-maintainer-email"} ) {
+    if($opt->{"force-maintainer-email"} !~ /.*\@.*\..*/) {
+      croak "Error: Email for maintainer specified but email is not valid";
+    };
   };
 
 
@@ -479,6 +481,12 @@ my $opt = get_options();
 check_valid_options($opt);
 my $o = Git::ToChangelog->new($opt);
 
+#
+# Usage examples:
+#
+# ./git2deblogs --generate --force-maintainer-name="<name>" --force-maintainer-email=<email>
+#
+# 
 
 
 if($opt->{generate}) {
