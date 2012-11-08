@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+package Git::ToChangelog;
 # 
 #
 # git2deblogs   --  An utility to keep your git logs in sync with your debian/changelog
@@ -8,6 +9,7 @@ use warnings;
 use Data::Dumper;
 use JSON::XS;
 use Carp;
+#use Email::Validate::Lite;
 #
 # This script creates a debian changelog.
 #
@@ -85,6 +87,18 @@ use Carp;
 
 
 
+
+##############################################################
+# constructor
+##############################################################
+
+sub new {
+  my ($class_name) = @_;
+  my $obj = {};
+  return bless $obj,$class_name;
+};
+
+
 ##############################################################
 # get tag information like name, start comming hash, end commit hash
 ##############################################################
@@ -157,9 +171,14 @@ sub get_tag_info {
 
 ##############################################################
 # git_log_to_array(..) will return an array with commits from git-log output
+#
+# input: two commit sha1 hashes
+# output: data for each commit in the range provided 
+#         in the input
 ##############################################################
 sub git_log_to_array {
-  my (@params) = @_;
+  my $self = shift;
+  my @params = @_;
   my $git_log_cmd =  "git  log --reverse --pretty=format:'{%n \"commit\": \"%H\", %n  \"author\": \"%an <%ae>\",%n  \"date\": \"%ad\",%n  \"message\": \"%s\"%n},'";
 
 
@@ -215,7 +234,7 @@ sub git_log_to_array {
 # add some commit messages to current version
 ##############################################################
 sub dch_append_commit {
-  my ($commit) = @_;
+  my ($self,$commit) = @_;
 
   my ($author_name) = $commit->{author} =~ /^\s*(.*?)</;
   my $commit_message = $commit->{message};
@@ -228,7 +247,7 @@ sub dch_append_commit {
 # Get the data associated with the person who made the tag
 ##############################################################
 sub get_tag_creation_commit_data {
-  my ($tag_name) = @_;
+  my ($self,$tag_name) = @_;
 
   my $git_show_output = `git show $tag_name | head -3 | tail -2`;
   #warn "git_show_output=[$git_show_output]";
@@ -257,9 +276,9 @@ sub get_tag_creation_commit_data {
 # changelog is being created.
 ##############################################################
 sub dch_create_new_version {
-  my ($tag_name,$is_first_version,$package_name) = @_;
+  my ($self,$tag_name,$is_first_version,$package_name) = @_;
 
-  my $maintainer = get_tag_creation_commit_data($tag_name);
+  my $maintainer = $self->get_tag_creation_commit_data($tag_name);
 
   if($is_first_version) {
     my $cmd = qq{NAME="$maintainer->{name}" EMAIL="$maintainer->{email}"  dch --create -v $tag_name --package "$package_name" "Created new $tag_name version from tag $tag_name"};
@@ -273,7 +292,7 @@ sub dch_create_new_version {
 ##############################################################
 ##############################################################
 sub dch_add_maintainer_details {
-  my ($tag_name) = @_;
+  my ($self,$tag_name) = @_;
   # what this command does is, it ignores the "date -R" command inside dch
   # and it lets you decide the date you want to appear in the changelog
   # as well as the email and name of the maintainer(all of which are taken from the git repo)
@@ -284,7 +303,7 @@ sub dch_add_maintainer_details {
   my $cmd_template = q{TZ='\"\";echo \"[MAINTAINER_TAG_CREATION_DATE]\"; #' EMAIL="[MAINTAINER_EMAIL]"  NAME="[MAINTAINER_NAME]" dch -a "[MAINTAINER_TAG_MESSAGE]";};
   my $cmd_rendered = $cmd_template;
 
-  my $maintainer = get_tag_creation_commit_data($tag_name);
+  my $maintainer = $self->get_tag_creation_commit_data($tag_name);
 
   #fix date(convert from "git show" format to debian/changelog format
   #
@@ -313,15 +332,14 @@ sub dch_add_maintainer_details {
 # 1) backup current changelog
 # 2) create a brand new changelog
 # 3) go over all tags and add data from the git log and sync it with the debian/changelog
-#
-# Warning: only use this for the first time you want to make the changelog
+# # Warning: only use this for the first time you want to make the changelog
 ##############################################################
 
 sub dch_init_changelog {
-  my ($package_name) = @_;
+  my ($self,$package_name) = @_;
 
   # get all the tags that conform to common versioning schemes
-  my @tags = get_tag_info();
+  my @tags = $self->get_tag_info();
   my $backup_timestamp = `date +%m-%d-%y_%H-%M-%S`;
   chomp $backup_timestamp; 
 
@@ -345,42 +363,101 @@ sub dch_init_changelog {
     my $tag_commits;
 
     if($tag->{start} ne $tag->{end}) {
-      $tag_commits = git_log_to_array($tag->{start},$tag->{end});
+      $tag_commits = $self->git_log_to_array($tag->{start},$tag->{end});
     } else {
-      $tag_commits = git_log_to_array($tag->{start});
+      $tag_commits = $self->git_log_to_array($tag->{start});
     };
 
     # create a new version in the changelog
-    dch_create_new_version($tag->{name},$first_version,$package_name);
+    $self->dch_create_new_version($tag->{name},$first_version,$package_name);
 
     # fixup because first commit is missed
     if($tag_idx == 0) {
-      my @retval = git_log_to_array($tag->{start});
+      my @retval = $self->git_log_to_array($tag->{start});
       my $commit = @{$retval[0]}[0];
       my $changelog_message = "$commit->{message} [ $commit->{author} ]";
       print "changelog_msg=$changelog_message\n";
-      dch_append_commit($commit);
+      $self->dch_append_commit($commit);
     };
 
     for my $commit(@$tag_commits) {
       # add each commit of the tag to the debian/changelog
       my $changelog_message = "$commit->{message} [ $commit->{author} ]";
       print "changelog_msg=$changelog_message\n";
-      dch_append_commit($commit);
+      $self->dch_append_commit($commit);
     };
 
-    dch_add_maintainer_details($tag->{name});
+    $self->dch_add_maintainer_details($tag->{name});
     $first_version = 0;
   };
 }
 
 
-my $opt_pkgname = `basename \`pwd\``;
-chomp $opt_pkgname;
-$opt_pkgname = "\"$opt_pkgname\"";
+###################################################
+# git2deblogs
+###################################################
 
-print "$opt_pkgname\n";
+package main;
+use Carp;
+use Getopt::Long;
 
-dch_init_changelog($opt_pkgname);
+sub get_options {
+  my $opt = {
+    "generate"               => undef,
+    "update"                 => undef,
+    "force-maintainer-name"  => undef,
+    "force-maintainer-email" => undef,
+    "verbose"                => undef,
+  };
 
-#dch_add_maintainer_details("0.1");
+  GetOptions(
+    "generate"               => \$opt->{"generate"}               ,
+    "update"                 => \$opt->{"update"}                 ,
+    "force-maintainer-name"  => \$opt->{"force-maintainer-name"}  ,
+    "force-maintainer-email" => \$opt->{"force-maintainer-email"} ,
+    "verbose"                => \$opt->{"verbose"}                ,
+  );
+
+
+  if(!$opt->{"generate"} && !$opt->{"update"}) {
+    croak "Error: You need to specify --generate or --update";
+  };
+
+  #if(Email::Validate::Lite) {
+  #};
+
+  return $opt;
+};
+
+
+sub check_valid_options {
+  my ($opt) = @_;
+
+  my $any_options = 0;
+  map {
+    $any_options |= defined($opt->{$_});
+  } keys %$opt;
+
+  if(!$any_options) {
+    croak "You're supposed to provide some cmdline switches";
+  };
+};
+
+
+$Carp::Verbose = 1;
+
+my $o = Git::ToChangelog->new();
+my $opt = get_options();
+check_valid_options($opt);
+
+
+
+if($opt->{generate}) {
+  my $opt_pkgname = `basename \`pwd\``;
+  chomp $opt_pkgname;
+  $opt_pkgname = "\"$opt_pkgname\"";
+  print "$opt_pkgname\n";
+  $o->dch_init_changelog($opt_pkgname);
+};
+
+

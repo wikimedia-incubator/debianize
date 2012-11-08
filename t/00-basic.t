@@ -98,7 +98,7 @@ sub run_git2deblogs {
   `
   cd $mock_repo_path
   ln -s ../git2deblogs
-  ./git2deblogs
+  ./git2deblogs --generate
   `;
 };
 
@@ -123,4 +123,4 @@ ok($commit_counts[$_] == 1,"commit $_ is supposed to be present 1 time")
 
 
 # Cleanup
-`rm -rf $mock_repo_path`;
+#`rm -rf $mock_repo_path`;
