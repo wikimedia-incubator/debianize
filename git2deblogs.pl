@@ -356,7 +356,12 @@ sub dch_add_maintainer_details {
   #format that you get from git => Tue Oct 9 16:35:46 2012 +0300
   #good format                  => Tue, 16 Oct 2012 09:41:14 +0300
 
-  $maintainer->{date} =~ s/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)\s+(\d+:\d+:\d+)\s+(\d+)/$1, $3 $2 $5 $4/;
+  my $pat_weekday = "(?<weekday>Mon|Tue|Wed|Thu|Fri|Sat|Sun)";
+  my $pat_month   = "(?<month>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)";
+  my $pat_time    = '(?<time>\d+:\d+:\d+)';
+  my $pat_day     = '(?<day>\d+)';
+  my $pat_year    = '(?<year>\d+)';
+  $maintainer->{date} =~ s/^$pat_weekday\s+$pat_month\s+$pat_day\s+$pat_time\s+$pat_year/$+{weekday}, $+{day} $+{month} $+{year} $+{time}/;
 
   #warn "date =".$maintainer->{date} ;
   #warn "name =".$maintainer->{name} ;
