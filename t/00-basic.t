@@ -10,6 +10,8 @@ my $mock_file_path = "A.txt";
 
 #
 # Generate new commit in test repo after modifying the file in it a bit
+# (make sure we have enough randomness so the file is completely different
+# from the one before)
 #
 
 sub gen_repo_new_commit {
