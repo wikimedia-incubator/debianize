@@ -109,7 +109,6 @@ run_git2deblogs();
 
 
 
-
 ok(total_tags_found_in_changelog()==5,"all tags present in debian/changelog");
 my @commit_counts = total_commits_found_in_changelog();
 

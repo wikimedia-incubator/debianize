@@ -4,19 +4,14 @@ use warnings;
 use Carp;
 use File::Spec;
 use List::Util qw(first);
-=begin verify_changelog_duplicate_versions
- 
- 1) Check that there are no duplicate entries in the debian/changelog
- 2) Don't update the debian/changelog there are problems with the changelog
-
-=cut
-
-
 
 =begin new
   
   The constructor here is responsible for getting the changelog content
 =cut
+
+
+our $pat_version = '(\d+(?:(?:\.\d+)+))';
 
 sub new {
   my ($class_name,$params) = @_;
@@ -72,6 +67,9 @@ sub extract_debian_package_name {
   Verifies that the changelog does not have duplicates versions inside it
   (could be the result of a double --update)
 
+ 1) Check that there are no duplicate entries in the debian/changelog
+ 2) Don't update the debian/changelog there are problems with the changelog
+
 =cut
 
 sub verify_changelog_duplicate_versions {
@@ -81,23 +79,34 @@ sub verify_changelog_duplicate_versions {
 
   my $package_name = $self->extract_debian_package_name();
   for my $line (@changelog_lines) {
-    my $version = '(\d+(?:(?:\.\d+)+))';
-    if(my ($version) = $line =~ /.*\s\($version\)\s.*; urgency=/) {
+    if(my ($version) = $line =~ /.*\s\($pat_version\)\s.*; urgency=/) {
       if(first { $_ eq $version } @versions ) {
-        return 1;
+        return "Error  : Failed duplicate version verificiation\n";
       };
       push @versions, $version;
     };
   };
 
-  return 0;
-};
+  return "";
+}
+
+
+sub verify_up_to_date_changelog {
+  my ($self) = @_;
+  my $package_name = $self->extract_debian_package_name();
+
+  my @changelog_lines = split(/\n/, $self->{changelog_content});
+
+  #my ($weekday,$day,$month,$year,$time) = @_;
+  
+  return "";
+}
 
 sub consistency_check {
   my ($self) = @_;
   my $warnings = undef;
-  $warnings .= "Error: Failed duplicate version verificiation\n" 
-    if $self->verify_changelog_duplicate_versions();
+  $warnings .=  $self->verify_changelog_duplicate_versions();
+  $warnings .=  $self->verify_up_to_date_changelog();
 
   # multiple checks go here ===> . <===
 

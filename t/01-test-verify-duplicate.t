@@ -32,10 +32,11 @@ my $o = Git::ConsistencyCheck->new({changelog_path => $fake_changelog});
 
 # Test 1 , good changelog
 $o->{changelog_content} = $content_good_changelog;
-ok(0 == $o->verify_changelog_duplicate_versions(),"good changelog");
+ok("" eq $o->verify_changelog_duplicate_versions(),"good changelog");
+
 # Test 2 , bad changelog
 $o->{changelog_content} = $content_bad_changelog;
-ok(1 == $o->verify_changelog_duplicate_versions(),"bad  changelog");
+ok("Error  : Failed duplicate version verificiation\n" eq $o->verify_changelog_duplicate_versions(),"bad  changelog");
 
 
 

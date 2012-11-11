@@ -11,6 +11,11 @@ use warnings;
 use Data::Dumper;
 use JSON::XS;
 use Carp;
+use lib "./debianize/lib";
+use lib "./lib";
+use lib "../lib";
+use Git::LogLineDate;
+
 
 =begin
 
@@ -352,16 +357,9 @@ sub dch_add_maintainer_details {
 
 
   #fix date(convert from "git show" format to debian/changelog format
-  #
-  #format that you get from git => Tue Oct 9 16:35:46 2012 +0300
-  #good format                  => Tue, 16 Oct 2012 09:41:14 +0300
-
-  my $pat_weekday = "(?<weekday>Mon|Tue|Wed|Thu|Fri|Sat|Sun)";
-  my $pat_month   = "(?<month>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)";
-  my $pat_time    = '(?<time>\d+:\d+:\d+)';
-  my $pat_day     = '(?<day>\d+)';
-  my $pat_year    = '(?<year>\d+)';
-  $maintainer->{date} =~ s/^$pat_weekday\s+$pat_month\s+$pat_day\s+$pat_time\s+$pat_year/$+{weekday}, $+{day} $+{month} $+{year} $+{time}/;
+  print "[!!] BEFORE: ".$maintainer->{date}."\n";
+  $maintainer->{date} = Git::LogLineDate::git_to_changelog($maintainer->{date});
+  print "[!!] AFTER:  ".$maintainer->{date}."\n";
 
 
   $cmd_rendered =~ s/\[MAINTAINER_TAG_CREATION_DATE\]/$maintainer->{date}/;
@@ -448,6 +446,7 @@ use Carp;
 use Getopt::Long;
 use lib "./lib";
 use lib "./debianize/lib";
+use lib "../lib";
 use Git::ConsistencyCheck;
 
 sub get_options {
