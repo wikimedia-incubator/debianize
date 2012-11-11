@@ -1,96 +1,106 @@
 #!/usr/bin/env perl
 package Git::ToChangelog;
-# 
-#
-# git2deblogs   --  An utility to keep your git logs in sync with your debian/changelog
-#
+=begin 
+
+ git2deblogs   --  An utility to keep your git logs in sync with your debian/changelog
+
+=cut
+
 use strict;
 use warnings;
 use Data::Dumper;
 use JSON::XS;
 use Carp;
-#use Email::Validate::Lite;
-#
-# This script creates a debian changelog.
-#
-# There are some assumptions made and listed below.
-# This script should only be used if you agree with these assumptions:
-#
-#              1) all tags are made from commits on master.
-#              2) there is at least one commit per tag(will fix this later, but it's quite common)
-#              3) the first tag begins with the first commit
-#              4) you number your tags with common version numbers
-#              5) the maintainer of the package for a specific version is the person who made the tag
-# 
-#
-# 
-# 
-# TODO: read more docs about git commits and find out if they are specific to a branch. look into using   git log --branches= if that is the case
-#       (otherwise mention as an assumption that we assume we only process all tags made on master branch)
-# TODO: add switches for verbosity that will show any external command run with all its parameters
-# TODO: add switch to group commits by author  name
-# TODO: add switch to just get the latest commits and not regenerate the whole thing from scratch
-# TODO: drop dch altogether and write code that will do the same things as its doing(calling dch to update the changelog or create a new version
-#       is proving to cause some massive delays)
-#
-# 
-# BUG: seems to be missing the very first commit message(need to fix this)
-# BUG: on webstatscollector one of the commits shows up just with the name on it
-#
 
-# For example, this will be the output of get_tag_info()
-#  {
-#    'name' => '0.1',
-#    'end' => '7e03f97de1d2d87a16eca5dc1240047f47251092',
-#    'start' => '823b3b7ad417a0e239dd78517b95d9518978abe4'
-#  },
-#  {
-#    'name' => '0.2',
-#    'end' => 'ce14a505b1fa81aafdd6b8dae835e94aa75fa800',
-#    'start' => 'f7a8da68a020b55bf0da33fe22b8fe05eaaef279'
-#  },
-#  {
-#    'name' => '0.3',
-#    'end' => 'be7ba49d5e97dca14263f3753e9540ac02effac4',
-#    'start' => '50596c9b6b7ae9d499ca280189914545680906aa'
-#  },
-#  {
-#    'name' => '0.4',
-#    'end' => 'e17f11f68f207949d2daf73e360b11d0dcf69e33',
-#    'start' => '92b0cb425113799d5812e92dd25c60246316a881'
-#  }
-#  
+=begin
 
-# For reference, this is the
-# output of  git rev-list 0.4 | tac -
-# (so commits, before and including 0.4)
-#
-# 823b3b7ad417a0e239dd78517b95d9518978abe4  \
-# 3676cce39aa7f554f5c309186791e14a3e61c617  |
-# 80b18c9c9ff83aa484e6d391c4a8effaece811d0  |=> 0.1
-# de1912460962b2aa099657e870cca8597ec14c75  |
-# 7e03f97de1d2d87a16eca5dc1240047f47251092  /
-# f7a8da68a020b55bf0da33fe22b8fe05eaaef279  \
-# bdd23196579bf19ab4faff8d240a67b53b5f25f6  |
-# 68d252a5f4a6f5203f1f6df16f215b4e2ed932fb  |=> 0.2
-# 44b59ec597ec5ab8798b039996357e9c636f2b84  |
-# ce14a505b1fa81aafdd6b8dae835e94aa75fa800  /
-# 50596c9b6b7ae9d499ca280189914545680906aa  \
-# 3298cf12d901973d5bce0fefe84caf58d2154de8  |
-# bfe848f66eb5f74bc65f741a82ee5ca4cb44f962  |=> 0.3
-# 9f743af1a849bfc44fb6c51584336463c51f4a95  |
-# be7ba49d5e97dca14263f3753e9540ac02effac4  /
-# 92b0cb425113799d5812e92dd25c60246316a881  \
-# af5c5a0d5146e118d2a8f28b062fa1466014ef67  |=> 0.4
-# d6c4a2473a6cbf897cb61b70eb2edf8f9a18e14a  |
-# e17f11f68f207949d2daf73e360b11d0dcf69e33  /
+ For possible contributions: Please stick as much as possible to using just modules from
+ Perl CORE   http://perldoc.perl.org/index-modules-A.html
+ so as to avoid adding dependencies.
 
 
+ This script creates a debian changelog.
+
+ There are some assumptions made and listed below.
+ This script should only be used if you agree with these assumptions:
+
+              1) all tags are made from commits on master.
+              2) there is at least one commit per tag(will fix this later, but it's quite common)
+              3) the first tag begins with the first commit
+              4) you number your tags with common version numbers
+              5) the maintainer of the package for a specific version is the person who made the tag
+ 
+
+ 
+ 
+ TODO: read more docs about git commits and find out if they are specific to a branch. look into using   git log --branches= if that is the case
+       (otherwise mention as an assumption that we assume we only process all tags made on master branch)
+ TODO: add switches for verbosity that will show any external command run with all its parameters
+ TODO: add switch to group commits by author  name
+ TODO: add switch to just get the latest commits and not regenerate the whole thing from scratch
+ TODO: drop dch altogether and write code that will do the same things as its doing(calling dch to update the changelog or create a new version
+       is proving to cause some massive delays)
+
+ 
+ BUG: seems to be missing the very first commit message(need to fix this)
+ BUG: on webstatscollector one of the commits shows up just with the name on it
 
 
-##############################################################
-# constructor
-##############################################################
+ For example, this will be the output of get_tag_info()
+  {
+    'name' => '0.1',
+    'end' => '7e03f97de1d2d87a16eca5dc1240047f47251092',
+    'start' => '823b3b7ad417a0e239dd78517b95d9518978abe4'
+  },
+  {
+    'name' => '0.2',
+    'end' => 'ce14a505b1fa81aafdd6b8dae835e94aa75fa800',
+    'start' => 'f7a8da68a020b55bf0da33fe22b8fe05eaaef279'
+  },
+  {
+    'name' => '0.3',
+    'end' => 'be7ba49d5e97dca14263f3753e9540ac02effac4',
+    'start' => '50596c9b6b7ae9d499ca280189914545680906aa'
+  },
+  {
+    'name' => '0.4',
+    'end' => 'e17f11f68f207949d2daf73e360b11d0dcf69e33',
+    'start' => '92b0cb425113799d5812e92dd25c60246316a881'
+  }
+  
+
+ For reference, this is the
+ output of  git rev-list 0.4 | tac -
+ (so commits, before and including 0.4)
+
+ 823b3b7ad417a0e239dd78517b95d9518978abe4  \
+ 3676cce39aa7f554f5c309186791e14a3e61c617  |
+ 80b18c9c9ff83aa484e6d391c4a8effaece811d0  |=> 0.1
+ de1912460962b2aa099657e870cca8597ec14c75  |
+ 7e03f97de1d2d87a16eca5dc1240047f47251092  /
+ f7a8da68a020b55bf0da33fe22b8fe05eaaef279  \
+ bdd23196579bf19ab4faff8d240a67b53b5f25f6  |
+ 68d252a5f4a6f5203f1f6df16f215b4e2ed932fb  |=> 0.2
+ 44b59ec597ec5ab8798b039996357e9c636f2b84  |
+ ce14a505b1fa81aafdd6b8dae835e94aa75fa800  /
+ 50596c9b6b7ae9d499ca280189914545680906aa  \
+ 3298cf12d901973d5bce0fefe84caf58d2154de8  |
+ bfe848f66eb5f74bc65f741a82ee5ca4cb44f962  |=> 0.3
+ 9f743af1a849bfc44fb6c51584336463c51f4a95  |
+ be7ba49d5e97dca14263f3753e9540ac02effac4  /
+ 92b0cb425113799d5812e92dd25c60246316a881  \
+ af5c5a0d5146e118d2a8f28b062fa1466014ef67  |=> 0.4
+ d6c4a2473a6cbf897cb61b70eb2edf8f9a18e14a  |
+ e17f11f68f207949d2daf73e360b11d0dcf69e33  /
+
+
+=cut
+
+
+
+=begin new
+ constructor
+=cut
 
 sub new {
   my ($class_name) = @_;
@@ -99,9 +109,10 @@ sub new {
 };
 
 
-##############################################################
-# get tag information like name, start comming hash, end commit hash
-##############################################################
+=begin get_tag_info
+ get tag information like name, start comming hash, end commit hash
+=cut
+
 sub get_tag_info {
 # get all tag names in an array
 
@@ -169,13 +180,14 @@ sub get_tag_info {
 
 
 
-##############################################################
-# git_log_to_array(..) will return an array with commits from git-log output
-#
-# input: two commit sha1 hashes
-# output: data for each commit in the range provided 
-#         in the input
-##############################################################
+=begin git_log_to_array(..) will return an array with commits from git-log output
+
+ input: two commit sha1 hashes
+ output: data for each commit in the range provided 
+         in the input
+=cut
+
+
 sub git_log_to_array {
   my $self = shift;
   my @params = @_;
@@ -230,9 +242,11 @@ sub git_log_to_array {
 };
 
 
-##############################################################
-# add some commit messages to current version
-##############################################################
+=begin dch_append_commit
+ add some commit messages to current version
+=cut
+
+
 sub dch_append_commit {
   my ($self,$commit) = @_;
 
@@ -243,9 +257,10 @@ sub dch_append_commit {
 };
 
 
-##############################################################
-# Get the data associated with the person who made the tag
-##############################################################
+=begin get_tag_creation_commit_data 
+ Get the data associated with the person who made the tag
+=cut
+
 sub get_tag_creation_commit_data {
   my ($self,$tag_name) = @_;
 
@@ -268,20 +283,24 @@ sub get_tag_creation_commit_data {
 
 
 
-##############################################################
-# create a new version ( for new tag )
-#
-# creating a new version for the package.
-# upon the first version, the changelog is being created, the 
-# changelog is being created.
-##############################################################
+=begin create a new version ( for new tag )
+
+ creating a new version for the package.
+ upon the first version, the changelog is being created, the 
+ changelog is being created.
+=cut
+
+
 sub dch_create_new_version {
   my ($self,$tag_name,$is_first_version,$package_name) = @_;
 
   my $maintainer = $self->get_tag_creation_commit_data($tag_name);
 
   if($is_first_version) {
-    my $cmd = qq{NAME="$maintainer->{name}" EMAIL="$maintainer->{email}"  dch --create -v $tag_name --package "$package_name" "Created new $tag_name version from tag $tag_name"};
+    my $maintainer_name  = $maintainer->{name} ;
+    my $maintainer_email = $maintainer->{email};
+    my $env_params = qq{NAME="$maintainer_name" EMAIL="$maintainer_email"};
+    my $cmd = qq{  dch --create -v $tag_name --package "$package_name" "Created new $tag_name version from tag $tag_name"};
     `$cmd`;
   } else {
     `NAME="$maintainer->{name}" dch --newversion "$tag_name" "Created new $tag_name version from tag $tag_name";`
@@ -289,10 +308,11 @@ sub dch_create_new_version {
 };
 
 
-##############################################################
-# dch_add_maintainer_details
-#
-##############################################################
+=begin dch_add_maintainer_details
+
+  Adding maintainer details after adding all the commit data in a particular tag(/version)
+
+=cut
 
 
 
@@ -332,13 +352,14 @@ sub dch_add_maintainer_details {
   `$cmd_rendered`;
 }
 
-##############################################################
-# dch_init_changelog will 
-# 1) backup current changelog
-# 2) create a brand new changelog
-# 3) go over all tags and add data from the git log and sync it with the debian/changelog
-# # Warning: only use this for the first time you want to make the changelog
-##############################################################
+=begin dch_init_changelog will 
+
+ 1) backup current changelog
+ 2) create a brand new changelog
+ 3) go over all tags and add data from the git log and sync it with the debian/changelog
+
+ Warning: only use this for the first time you want to make the changelog
+=cut
 
 sub dch_init_changelog {
   my ($self,$package_name) = @_;
@@ -395,7 +416,104 @@ sub dch_init_changelog {
     $self->dch_add_maintainer_details($tag->{name});
     $first_version = 0;
   };
-}
+};
+
+
+package Git::ConsistencyCheck;
+use strict;
+use warnings;
+use Carp;
+use File::Spec;
+use List::Util qw(first);
+=begin verify_changelog_duplicate_versions
+ 
+ 1) Check that there are no duplicate entries in the debian/changelog
+ 2) Don't update the debian/changelog there are problems with the changelog
+
+=cut
+
+
+
+=begin new
+  
+  The constructor here is responsible for getting the changelog content
+=cut
+
+sub new {
+  my ($class_name,$params) = @_;
+  my $obj = {};
+
+  croak "Error [". __PACKAGE__ ."] : was expecting a hashref as parameter"
+    if ref($params) ne "HASH";
+
+  $params->{changelog_path} ||= "debian/changelog";
+
+  if($params->{changelog_path}) { 
+    if( !-f $params->{changelog_path}) {
+      croak "Error [". __PACKAGE__ ."] :  changelog path given but file doesn't exist";
+    };
+    $params->{changelog_path} = File::Spec->rel2abs($params->{changelog_path});
+
+    $obj->{changelog_content} = `cat $params->{changelog_path}`;
+  };
+
+  return bless $obj,$class_name;
+};
+
+
+=begin extract_debian_package_name
+
+  Finds out the name of the debian package
+
+=cut
+
+sub extract_debian_package_name {
+  my ($self) = @_;
+
+  my ($volume,$directories,$file) =
+      File::Spec->splitpath( $self->{changelog_path} );
+
+  my $control_path = 
+      File::Spec->catpath( $volume,$directories,"control");
+
+  my $content_control = `cat $control_path`;
+
+  my $package_name = $content_control =~ /^Package: (.*)$/;
+
+  return $package_name;
+};
+
+=begin verify_changelog_duplicate_versions
+
+  Verifies that the changelog does not have duplicates versions inside it
+  (could be the result of a double --update)
+
+=cut
+
+sub verify_changelog_duplicate_versions {
+  my ($self) = @_;
+  my @changelog_lines = split( /\n/, $self->{changelog_content});
+  my @versions = ();
+
+  my $package_name = $self->extract_debian_package_name();
+  for my $line (@changelog_lines) {
+    my $version = '\d+(?:(?:\d+)+)?';
+    if(my ($version) = $line =~ /^$package_name.*\s\(($version)\);\surgency=/) {
+      if(first { $_ eq $version }) {
+        return 1;
+      };
+      push @versions, $version;
+    };
+  };
+
+  return 0;
+};
+
+sub consistency_check {
+  my ($self) = @_;
+  croak "Error: Failed duplicate version verificiation" 
+    if $self->verify_changelog_duplicate_versions();
+};
 
 
 package main;
@@ -417,16 +535,21 @@ sub get_options {
     "force-maintainer-name"  => \$opt->{"force-maintainer-name"}  ,
     "force-maintainer-email" => \$opt->{"force-maintainer-email"} ,
     "verbose"                => \$opt->{"verbose"}                ,
+    "consistency-check"      => \$opt->{"consistency-check"}      ,
   );
 
 
-  if(!$opt->{"generate"} && !$opt->{"update"}) {
-    croak "Error: You need to specify --generate or --update";
+  if(!$opt->{"generate"}            && 
+     !$opt->{"update"}              &&
+     !$opt->{"consistency-check"}   
+   ) {
+    die   "Error: One of the following options is mandatory\n".
+          "                                                \n".
+          "        --generate                              \n".
+          "        --update                                \n".
+          "        --consistency-check                     \n";
   };
 
-
-  #if(Email::Validate::Lite) {
-  #};
 
   return $opt;
 };
