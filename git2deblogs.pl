@@ -103,8 +103,14 @@ use Carp;
 =cut
 
 sub new {
-  my ($class_name) = @_;
+  my ($class_name,$opts) = @_;
   my $obj = {};
+  if($opts->{"force-maintainer-name"}) {
+    $obj->{"force-maintainer-name"} = $opts->{"force-maintainer-name"};
+  };
+  if($opts->{"force-maintainer-email"}) {
+    $obj->{"force-maintainer-email"} = $opts->{"force-maintainer-email"};
+  };
   return bless $obj,$class_name;
 };
 
@@ -325,10 +331,25 @@ sub dch_add_maintainer_details {
   # this function should be run after all the commits in that tag have been added.
   # this is because 
 
+
+
+
   my $cmd_template = q{TZ='\"\";echo \"[MAINTAINER_TAG_CREATION_DATE]\"; #' EMAIL="[MAINTAINER_EMAIL]"  NAME="[MAINTAINER_NAME]" dch -a "[MAINTAINER_TAG_MESSAGE]";};
   my $cmd_rendered = $cmd_template;
 
   my $maintainer = $self->get_tag_creation_commit_data($tag_name);
+
+
+  if($self->{"force-maintainer-name"}) {
+    $maintainer->{name} = $self->{"force-maintainer-name"} 
+                          || $maintainer->{name};
+  };
+
+  if($self->{"force-maintainer-email"}) {
+    $maintainer->{email} = $self->{"force-maintainer-email"} 
+                          || $maintainer->{email};
+  };
+
 
   #fix date(convert from "git show" format to debian/changelog format
   #
@@ -550,6 +571,14 @@ sub get_options {
           "        --consistency-check                     \n";
   };
 
+  # adding RFC822PAT later,
+  # this will do for the moment
+  if($opt->{"force-maintainer-email"} ) {
+    if($opt->{"force-maintainer-email"} !~ /.*\@.*\..*/) {
+      croak "Error: Email for maintainer specified but email is not valid";
+    };
+  };
+
 
   return $opt;
 };
@@ -571,10 +600,16 @@ sub check_valid_options {
 
 $Carp::Verbose = 1;
 
-my $o = Git::ToChangelog->new();
 my $opt = get_options();
 check_valid_options($opt);
+my $o = Git::ToChangelog->new($opt);
 
+#
+# Usage examples:
+#
+# ./git2deblogs --generate --force-maintainer-name="<name>" --force-maintainer-email=<email>
+#
+# 
 
 
 if($opt->{generate}) {
