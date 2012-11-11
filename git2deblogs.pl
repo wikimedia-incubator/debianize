@@ -363,9 +363,6 @@ sub dch_add_maintainer_details {
   my $pat_year    = '(?<year>\d+)';
   $maintainer->{date} =~ s/^$pat_weekday\s+$pat_month\s+$pat_day\s+$pat_time\s+$pat_year/$+{weekday}, $+{day} $+{month} $+{year} $+{time}/;
 
-  #warn "date =".$maintainer->{date} ;
-  #warn "name =".$maintainer->{name} ;
-  #warn "email=".$maintainer->{email};
 
   $cmd_rendered =~ s/\[MAINTAINER_TAG_CREATION_DATE\]/$maintainer->{date}/;
   $cmd_rendered =~ s/\[MAINTAINER_EMAIL\]/$maintainer->{email}/;
