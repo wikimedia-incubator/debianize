@@ -447,6 +447,7 @@ package main;
 use Carp;
 use Getopt::Long;
 use lib "./lib";
+use Git::ConsistencyCheck;
 
 sub get_options {
   my $opt = {
@@ -486,6 +487,12 @@ sub get_options {
     };
   };
 
+
+  if($opt->{"consistency-check"}) {
+    my $o = Git::ConsistencyCheck->new({});
+    my $warnings = $o->consistency_checks();
+    print $warnings;
+  };
 
   return $opt;
 };

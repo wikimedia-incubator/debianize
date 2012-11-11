@@ -95,8 +95,18 @@ sub verify_changelog_duplicate_versions {
 
 sub consistency_check {
   my ($self) = @_;
-  croak "Error: Failed duplicate version verificiation" 
+  my $warnings = undef;
+  $warnings .= "Error: Failed duplicate version verificiation\n" 
     if $self->verify_changelog_duplicate_versions();
+
+  # multiple checks go here ===> . <===
+
+  if(!defined($warnings)) {
+    $warnings = "OK";
+  } else {
+    $warnings = "Not OK\n\n$warnings";
+  };
+  return $warnings;
 };
 
 
