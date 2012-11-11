@@ -197,7 +197,7 @@ sub get_tag_info {
 sub git_log_to_array {
   my $self = shift;
   my @params = @_;
-  my $git_log_cmd =  "git  log --reverse --pretty=format:'{%n \"commit\": \"%H\", %n  \"author\": \"%an <%ae>\",%n  \"date\": \"%ad\",%n  \"message\": \"%s\"%n},'";
+  my $git_log_cmd =  qq{git  log --reverse --pretty=format:'{%n "commit": "%H", %n  "author": "%an <%ae>",%n  "date": "%ad",%n  "message": "%s"%n},'};
 
 
   if(@params == 2) {
