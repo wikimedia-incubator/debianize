@@ -135,7 +135,7 @@ sub get_tag_info {
 
 
   if(@tag_names == 0) {
-    croak "Error: Please make some tags like \"0.1.3\"."
+    croak "Error: Please make some tags (e.g. \"0.1.3\") ." 
   };
 
   # all the commit hashes of the latest tag(containing all the commit hashes of all the tags)
@@ -447,6 +447,7 @@ package main;
 use Carp;
 use Getopt::Long;
 use lib "./lib";
+use lib "./debianize/lib";
 use Git::ConsistencyCheck;
 
 sub get_options {
