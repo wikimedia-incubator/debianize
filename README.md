@@ -9,12 +9,13 @@ Debianization tools:
 
 Dependencies:
 
-*   devscripts (debian package)
-*   git-core   (debian package)
+*   devscripts          (debian package)
+*   git-core            (debian package)
+*   Perl >= 5.10.0      (comes by default with Debian-based distro)
 
 
 
----
+- - - - 
 
 debianize.sh
 ------------
@@ -33,7 +34,7 @@ Then make symlinks for:
 *   git2deblogs.pl
 
 Make sure you have at least one tag (one tag means one package version).
-Make sure to run __git2deblogs__ to update your __debian/changelog__ as this is the file which controls the version of
+Make sure to run __git2deblogs --generate__ to update your __debian/changelog__ as this is the file which controls the version of
 the package you will generate.
 
 Now run
@@ -43,7 +44,17 @@ Now run
 git2deblogs.pl
 --------------
 
+The git2deblogs.pl has command-line paramters. Here are some examples of using them
 
+*    --generate
+*    --force-maintainer-name="Person name"
+*    --force-maintainer-email="name@website.com"
+*    --consistency-check
+
+The --generate switch will backup your current changelog and will regenerate everything from scratch.
+The --force-maintainer-name and -email  will force these values inside the changelog (by default, these are taken 
+from the name/email of the person who made the git tag).
+The --consistency-check switch can be used when you're going to make a release to check your changelog and see if it's out of date or perform various consistency checks on it.
 
 Continous integration available here:
 
