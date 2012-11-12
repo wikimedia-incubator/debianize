@@ -1,0 +1,29 @@
+a-package-name (0.3.19) maverick; urgency=low
+
+  [ Author1  ]
+  * Commit message 6
+
+  [ Author2  ]
+  * Commit message 5 multi-line line 1
+  * Commit message 4 multi-line line 2
+
+ -- The Maintainer <the_maintainer@maintainer-website.com>  Fri, 2 Nov 2012 18:52:28 +0200
+
+a-package-name (0.3) maverick; urgency=low
+
+  [ Author3  ]
+  * Commit message 2
+ 
+ -- The Other Maintainer <the_other_maintainer@maintainer-website.com>  Fri, 5 Oct 2012 16:27:30 +0300
+
+a-package-name (0.3) maverick; urgency=low
+
+  [ Author3  ]
+  * Commit message 2
+
+  [ Author4  ]
+  * Commit message 1
+ 
+ -- The Maintainer <the_maintainer@maintainer-website.com>  Fri, 5 Oct 2012 16:27:30 +0300
+
+a-package-name (0.2.0) UNRELEASED; urgency=low

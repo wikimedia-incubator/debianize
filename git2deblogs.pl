@@ -459,12 +459,12 @@ sub get_options {
   };
 
   GetOptions(
-    "generate"               => \$opt->{"generate"}               ,
-    "update"                 => \$opt->{"update"}                 ,
-    "force-maintainer-name"  => \$opt->{"force-maintainer-name"}  ,
-    "force-maintainer-email" => \$opt->{"force-maintainer-email"} ,
-    "verbose"                => \$opt->{"verbose"}                ,
-    "consistency-check"      => \$opt->{"consistency-check"}      ,
+    "generate"                 => \$opt->{"generate"}               ,
+    "update"                   => \$opt->{"update"}                 ,
+    "force-maintainer-name=s"  => \$opt->{"force-maintainer-name"}  ,
+    "force-maintainer-email=s" => \$opt->{"force-maintainer-email"} ,
+    "verbose"                  => \$opt->{"verbose"}                ,
+    "consistency-check"        => \$opt->{"consistency-check"}      ,
   );
 
 
@@ -490,7 +490,7 @@ sub get_options {
 
   if($opt->{"consistency-check"}) {
     my $o = Git::ConsistencyCheck->new({});
-    my $warnings = $o->consistency_checks();
+    my $warnings = $o->consistency_check();
     print $warnings;
   };
 

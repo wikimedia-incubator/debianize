@@ -9,8 +9,9 @@ our $pat_time    = '(?<time>\d+:\d+:\d+)';
 our $pat_day     = '(?<day>\d+)';
 our $pat_year    = '(?<year>\d+)';
 
-#format that you get from git => Tue Oct 9 16:35:46 2012 +0300
-#debian/changelog format      => Tue, 16 Oct 2012 09:41:14 +0300
+#input  example(what you get from git)    => Tue Oct 9 16:35:46 2012 +0300
+#output example(debian/changelog format)  => Tue, 16 Oct 2012 09:41:14 +0300
+
 sub git_to_changelog {
   my ($logline) = @_;
   #warn Dumper \@_;
@@ -21,7 +22,7 @@ sub git_to_changelog {
 
 sub changelog_to_git {
   my ($logline) = @_;
-  $logline =~ s/^$pat_weekday\s+$pat_day\s+$pat_month\s+$pat_year\s+$pat_time/$+{weekday} $+{day} $+{month} $+{year} $+{time}/;
+  $logline =~ s/^$pat_weekday,\s+$pat_day\s+$pat_month\s+$pat_year\s+$pat_time/$+{weekday} $+{month} $+{day} $+{time} $+{year}/;
   return $logline;
 };
 
