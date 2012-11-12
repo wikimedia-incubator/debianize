@@ -12,6 +12,7 @@ Dependencies:
 *   devscripts          (debian package)
 *   git-core            (debian package)
 *   Perl >= 5.10.0      (comes by default with Debian-based distro)
+*   libjson-xs-perl     (debian package)
 
 
 
