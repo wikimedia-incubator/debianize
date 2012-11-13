@@ -263,7 +263,7 @@ sub dch_append_commit {
 
   my ($author_name) = $commit->{author} =~ /^\s*(.*?)</;
   my $commit_message = $commit->{message};
-
+  
   `NAME="$author_name" dch -a "$commit_message"`;
 };
 
@@ -314,7 +314,13 @@ sub dch_create_new_version {
     my $cmd = qq{  dch --create -v $tag_name --package "$package_name" "Created new $tag_name version from tag $tag_name"};
     `$cmd`;
   } else {
-    `NAME="$maintainer->{name}" dch --newversion "$tag_name" "Created new $tag_name version from tag $tag_name";`
+    my $param_distribution = "";
+    if($self->{distribution}) {
+      $param_distribution = "--force-distribution -D \"$self->{distribution}\"";
+    };
+    my $param_version = qq{--newversion "$tag_name"};
+    my $param_message = qq{"Created new $tag_name version from tag $tag_name"};
+    `NAME="$maintainer->{name}" dch $param_version $param_message $param_distribution;`
   };
 };
 
@@ -465,6 +471,7 @@ sub get_options {
     "force-maintainer-email=s" => \$opt->{"force-maintainer-email"} ,
     "verbose"                  => \$opt->{"verbose"}                ,
     "consistency-check"        => \$opt->{"consistency-check"}      ,
+    "distribution=s"           => \$opt->{"distribution"}           ,
   );
 
 
@@ -525,6 +532,10 @@ my $o = Git::ToChangelog->new($opt);
 #
 # 
 
+if($opt->{"distribution"} && 
+   length $opt->{"distribution"} > 1) {
+  $o->{distribution} = $opt->{distribution};
+};
 
 if($opt->{generate}) {
   my $opt_pkgname = `basename \`pwd\``;

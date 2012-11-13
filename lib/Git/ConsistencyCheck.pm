@@ -10,6 +10,11 @@ use lib "./lib";
 use lib "../lib";
 use Git::LogLineDate;
 
+# TODO: Use /usr/share/perl5/Dpkg/Changelog/Parse.pm
+#  Dpkg::Changelog::Parse (it's used by the dpkg-parsechangelog tool)
+#  Find out if it's suited to be used to parse stuff from the changelog
+#
+
 =begin new
   
   The constructor here is responsible for getting the changelog content
