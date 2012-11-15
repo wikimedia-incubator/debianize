@@ -142,12 +142,8 @@ echo "DH_MAKE_PKG_NAME=$DH_MAKE_PKG_NAME"
 echo "PACKAGE=$PACKAGE"
 
 
-#if [ ! -e "$DH_MAKE_PKG_NAME" ]; then
-  #echo "Error: archive $DH_MAKE_PKG_NAME doesn't exist"
-  #exit 2
-#else
-yes | dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
-#fi
+# automate dh_make so it doesn't ask anymore questions
+yes | dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME || true
 
 
 

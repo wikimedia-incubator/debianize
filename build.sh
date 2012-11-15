@@ -36,7 +36,7 @@ if [ -z $MACHINE -o $MACHINE == "" ]; then
 fi
 
 function run_git2deblogs {
-  ./git2deblogs --generate --distribution="$DISTRO-wikimedia" --force-maintainer-name="Diederik van Liere" --force-maintainer-email=dvanliere@wikimedia.org
+  ./git2deblogs.pl --generate --distribution="$DISTRO-wikimedia" --force-maintainer-name="Diederik van Liere" --force-maintainer-email=dvanliere@wikimedia.org
 }
 
 echo "Building on machine [$MACHINE] with distro [$DISTRO]..."
