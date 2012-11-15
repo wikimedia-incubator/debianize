@@ -56,5 +56,4 @@ $sandbox->run_git2deblogs;
 
 ok( $sandbox->count_line_with_pattern("(0.2) test-distrib") == 1, "test-ditrib distribution name found in version 0.2");
 
-
 $sandbox->destroy_repo();

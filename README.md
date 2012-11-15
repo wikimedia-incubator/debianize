@@ -57,6 +57,20 @@ The --force-maintainer-name and -email  will force these values inside the chang
 from the name/email of the person who made the git tag).
 The --consistency-check switch can be used when you're going to make a release to check your changelog and see if it's out of date or perform various consistency checks on it.
 
+
+build
+-----
+
+It`s a script to build multiple packages on different architectures.
+
+
+updates
+-------
+
+Because this is under development and continous evolution, run this from time to time
+
+    git submodule foreach git pull
+
 Continous integration available here:
 
 http://www.garage-coding.com:8010/builders/git2deblogs-builder

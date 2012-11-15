@@ -146,7 +146,7 @@ echo "PACKAGE=$PACKAGE"
   #echo "Error: archive $DH_MAKE_PKG_NAME doesn't exist"
   #exit 2
 #else
-dh_make -c ${LICENSE} -e ${DEBEMAIL} -s --createorig -p $DH_MAKE_PKG_NAME
+yes | dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
 #fi
 
 
