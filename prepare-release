@@ -11,6 +11,55 @@ if [[ -z $NEW_VERSION ]]; then
   NEW_VERSION="0.0.1";
 fi
 
+
+REVISION_COUNT=`git log --oneline | wc -l`
+echo "NEW_VERSION=$NEW_VERSION"
+echo "REVISION_CO=$REVISION_COUNT"
+VERSION_PART[0]=""
+
+
+#############################################################
+# Split version in parts
+#############################################################
+
+IFS="." 
+set $NEW_VERSION 
+VERSION_LEN=0
+for item  
+do
+  VERSION_PART[$VERSION_LEN]=${item}
+  echo "Element $VERSION_LEN: $item"
+  ((VERSION_LEN++))
+done
+
+# clear out the 4th part of the version(and hopefuly will work for the other ones as well)
+unset VERSION_PART[3]
+
+#############################################################
+# Add revision count to the 3rd part of the version
+#############################################################
+#VERSION_PART[$VERSION_LEN-1]=$(( ${VERSION_PART[${VERSION_LEN}-1]}+${REVISION_COUNT} ))
+
+VERSION_PART[2]=$(( ${VERSION_PART[2]}+${REVISION_COUNT} ))
+echo ${VERSION_PART[$VERSION_LEN-1]}
+
+#############################################################
+# Re-assemble version
+#############################################################
+
+NEW_VERSION=""
+IFS="."
+NEW_VERSION="${VERSION_PART[*]}"
+IFS=""
+echo "NEW_VERSION=$NEW_VERSION"
+echo ${NEW_VERSION}
+
+
+
+#############################################################
+# Create tag for this new version
+#############################################################
+
 read -r -p "Will create tag with version [$NEW_VERSION]. Are you sure ? [Y/n] " response
 case $response in
     [yY][eE][sS]|[yY]) 
