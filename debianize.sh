@@ -34,8 +34,9 @@ while getopts "d" optname
   done
 
 
-
-
+#Determine absolute path to debianize folder
+DEBIANIZE_PATH=$(perl -MCwd=abs_path -e '$p=abs_path("debianize.sh"); system("dirname \"$p\"");')
+echo "[DBG] DEBIANIZE_PATH=$DEBIANIZE_PATH";
 
 # Set env variables
 if [ -z "$DEBFULLNAME" ]; then
@@ -56,7 +57,7 @@ fi
 # TODO: find a canonical way to get the repository name
 
 function upsearch () {
-    test / == "$PWD" && return || test -e "$1" && echo "found: " "$PWD" && return || cd .. && upsearch "$1"
+    test / == "$PWD" && return || test -e "$1" && echo "[DBG] found: " "$PWD" && return || cd .. && upsearch "$1"
 }
 
 upsearch '.git';
@@ -124,16 +125,22 @@ echo "[DBG] VERSION=$VERSION";
 echo "[DBG] MAIN_VERSION=$MAIN_VERSION";
 
 PACKAGE=${PWD##*/}
-echo 'Building package for ' $PACKAGE
+echo 'Building package for '$PACKAGE
 
 
 # We need to make sure that the exclude file at least exists
-if [ ! -f exclude ];
+# if it does not exist symlink to the one provided by the 
+# debianize repo. That exclude file has only one entry and that
+# says it should ignore the .git folder.
+if [ ! -f "exclude" ];
 then
-    touch exclude
+    echo "[DBG] Creating symlink to file exclude provide by debianize.";
+    EXCLUDE_PATH=$DEBIANIZE_PATH/exclude
+else
+    EXCLUDE_PATH=exclude
 fi
 
-tar -cvf $PACKAGE.tar --exclude-from=exclude . >/dev/null
+tar -cvf $PACKAGE.tar --exclude-from=$EXCLUDE_PATH . >/dev/null
 mv $PACKAGE.tar ../
 cd ..
 rm -rf $PACKAGE-${VERSION}
@@ -152,7 +159,7 @@ echo 'Replacing version placeholders';
 # Replace version inside source files
 #
 VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' \
-                 `find -name "*.c" -or -name "*.h" -or -name "*.cpp" -or -name "*.h"`;
+                 `find . -name "*.c" -or -name "*.h" -or -name "*.cpp"`;
 
 # 
 # Replace version and package name inside configure.ac
