@@ -54,6 +54,12 @@ fi
 
 # Determine package
 # TODO: find a canonical way to get the repository name
+
+function upsearch () {
+    test / == "$PWD" && return || test -e "$1" && echo "found: " "$PWD" && return || cd .. && upsearch "$1"
+}
+
+upsearch '.git';
 REPOSITORY_BASENAME=$(basename "$PWD")
 
 
@@ -102,11 +108,30 @@ FIRST_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+
 FINAL_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | head -1`
 REMOTE_URL=`git config --get remote.origin.url  | perl -ne '@url=split /\@/,$_; print $url[1];'`
 
-VERSION=`git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' `
-MAIN_VERSION=`git describe --abbrev=0`
+VERSION=`git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' ` || true
+MAIN_VERSION=`git describe --abbrev=0` || true
+
+# there are no tags containing version numbering, therefore we just hardcode it to 1.0
+if [ -z "$VERSION" ]; then
+    VERSION=1.0;
+fi
+
+if [ -z "$MAIN_VERSION" ]; then
+    MAIN_VERSION=1.0;
+fi
+
+echo "[DBG] VERSION=$VERSION";
+echo "[DBG] MAIN_VERSION=$MAIN_VERSION";
 
 PACKAGE=${PWD##*/}
 echo 'Building package for ' $PACKAGE
+
+
+# We need to make sure that the exclude file at least exists
+if [ ! -f exclude ];
+then
+    touch exclude
+fi
 
 tar -cvf $PACKAGE.tar --exclude-from=exclude . >/dev/null
 mv $PACKAGE.tar ../
