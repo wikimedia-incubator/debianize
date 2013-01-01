@@ -6,6 +6,19 @@ set -e
 set -o pipefail
 
 
+#make sure that dh_make is installed
+DH_MAKE_PATH=`which dh_make`;
+echo "[DBG] DH_MAKE_PATH=$DH_MAKE_PATH";
+if [ -z $DH_MAKE_PATH ]; then
+    echo "[ERROR] Please make sure that dh_make is installed";
+    exit 1;
+fi
+
+#make sure that a 'debian' folder is present
+if [ -d "$debian" ]; then
+    echo "[ERROR] Could not find the debian folder.";
+    exit 1;
+fi
 
 DPKG_GNUPG_OPTION=""
 DPKG_DEPS_OPTION=""
@@ -175,7 +188,7 @@ echo "PACKAGE=$PACKAGE"
 
 
 # automate dh_make so it doesn't ask anymore questions
-yes | dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME || true
+yes | dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
 
 
 
