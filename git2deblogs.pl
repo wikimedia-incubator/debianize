@@ -20,11 +20,18 @@ BEGIN {
   };
 
   if(!try_load("JSON::XS")) {
-    confess "[ERR] You don't have JSON::XS installed. Please install it using cpanm or   sudo aptitude install libjson-xs-perl";
+    confess "
+[ERROR] You don't have JSON::XS installed. 
+  Solutions: 1) cpanm JSON::XS
+             2) sudo aptitude install libjson-xs-perl
+    \n";
   };
 
   if(`whereis dch | perl -ne 'chomp; s/^.*?://; print \$_ ? 0 : 1;'`) {
-    confess "[ERR] You don't have dch installed. Please install it using   sudo aptitude install devscripts";
+    confess "
+[ERROR] You don't have dch installed. 
+  Solutions: 1) sudo aptitude install devscripts
+    \n";
   };
 }
 
