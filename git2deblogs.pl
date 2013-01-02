@@ -45,7 +45,7 @@ use Git::LogLineDate;
  TODO: add switch to group commits by author  name
  TODO: add switch to just get the latest commits and not regenerate the whole thing from scratch
  TODO: drop dch altogether and write code that will do the same things as its doing(calling dch to update the changelog or create a new version
-       is proving to cause some massive delays)
+       is proving to cause some massive delays).
 
  
  BUG: seems to be missing the very first commit message(need to fix this)
@@ -129,13 +129,20 @@ sub get_tag_info {
 # get all tag names in an array
 
   my @tags;
-  # get only tags of the form 
+  # get only tags of the following form
   #     \d+  or
   #     \d+.\d+ or
   #     \d+.\d+.\d+
   #     etc
 
   my @tag_names    = 
+    sort { 
+            my @A = split(/\./,$a); 
+            my @B = split(/\./,$b); 
+            $A[0] <=> $B[0] ||
+            $A[1] <=> $B[1] ||
+            $A[2] <=> $B[2]   
+         }
     grep { /^\d+(?:(?:\.\d+)+)$/ } 
     split /\n/,`git tag`;
 
@@ -154,17 +161,17 @@ sub get_tag_info {
   my @tag_end_commits = map { `git rev-list $_ | head -1` =~ /^([^\n]+)/  } @tag_names;
 
   push @tags, {
-    name  => $tag_names[0],
+    name  => $tag_names[0]      ,
     start => $all_tag_commits[0],
     end   => $tag_end_commits[0],
   };
-
-
 
   #iterate through $tag_names ( start at 1 because we already processed one tag just above )
   my $t = 1;
   #iterate through $all_tag_commits
   my $a = 0;
+
+  warn Dumper \@tag_names;
   while($t < @tag_names) {
     # find next end commit in @all_tag_commits
 
@@ -308,12 +315,15 @@ sub dch_create_new_version {
 
   my $maintainer = $self->get_tag_creation_commit_data($tag_name);
 
+  $package_name = lc($package_name);
+
   if($is_first_version) {
     my $maintainer_name  = $maintainer->{name} ;
     my $maintainer_email = $maintainer->{email};
     my $env_params = qq{NAME="$maintainer_name" EMAIL="$maintainer_email"};
     my $cmd = qq{  dch --create -v $tag_name --package "$package_name" "Created new $tag_name version from tag $tag_name"};
-    `$cmd`;
+    warn "[DBG] package name => [$package_name]";
+    system($cmd);
   } else {
     my $param_distribution = "";
     if($self->{distribution}) {
@@ -533,7 +543,7 @@ my $o = Git::ToChangelog->new($opt);
 #
 # 
 
-if($opt->{"distribution"} && 
+if(       $opt->{"distribution"} && 
    length $opt->{"distribution"} > 1) {
   $o->{distribution} = $opt->{distribution};
 };
