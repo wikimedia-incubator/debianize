@@ -10,12 +10,22 @@ set -o pipefail
 DH_MAKE_PATH=`which dh_make`;
 echo "[DBG] DH_MAKE_PATH=$DH_MAKE_PATH";
 if [ -z $DH_MAKE_PATH ]; then
-    echo "[ERROR] Please make sure that dh_make is installed";
+    echo "[ERROR] Please make sure that dh_make is installed.";
     exit 1;
 fi
 
+# TODO add check to verify that autoconf and libtoolize are installed
+#make sure that autoconf is installed
+#AUTORECONF_PATH=`which autoreconf`;
+
+#echo "[DBG] AUTORECONF_PATH=$AUTORECONF_PATH";
+#if [ -z $AUTORECONF_PATH ]; then
+#    echo "[ERROR] Please make sure that autoconf is installed.";
+#    exit 1;
+#fi
+
 #make sure that a 'debian' folder is present
-if [ -d "$debian" ]; then
+if [ -d "src/debian" ]; then
     echo "[ERROR] Could not find the debian folder.";
     exit 1;
 fi
@@ -138,11 +148,12 @@ echo "[DBG] VERSION=$VERSION";
 echo "[DBG] MAIN_VERSION=$MAIN_VERSION";
 
 PACKAGE=${PWD##*/}
-echo 'Building package for '$PACKAGE
+PACKAGE=$(echo $PACKAGE | perl -e 'print lc <>;');
+echo '[DBG] Building package for '$PACKAGE
 
 
 # We need to make sure that the exclude file at least exists
-# if it does not exist symlink to the one provided by the 
+# if it does not exist symlink to the one provided by the
 # debianize repo. That exclude file has only one entry and that
 # says it should ignore the .git folder.
 if [ ! -f "exclude" ];
@@ -188,31 +199,33 @@ echo "PACKAGE=$PACKAGE"
 
 
 # automate dh_make so it doesn't ask anymore questions
-yes | dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
+dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
 
 
 
 #wget "https://raw.github.com/wmf-analytics/debianize/master/git2deblogs" -O git2deblogs;
 #mkdir debian;
 #chmod +x git2deblogs;
-#./git2deblogs;
+#./git2deblogs --generate;
 
+#disable some weird cleaning
 
-
-cd debian
-rm *ex *EX || true
-rm -rf changelog_backup/ || true
-rm README.Debian dirs || true
-cd ..
-_CURRDIR=$(basename `pwd`)
+#cd debian
+#rm *ex *EX || true
+#rm -rf changelog_backup/ || true
+#rm README.Debian dirs || true
+#cd ..
+#_CURRDIR=$(basename `pwd`)
 
 # Get debian/ from development directory
-if [ "$_CURRDIR" != "$PACKAGE" ]; then
-  rm -rf debian/
-  cp -r ../$PACKAGE/debian .
-fi
+#if [ "$_CURRDIR" != "$PACKAGE" ]; then
+#  rm -rf debian/
+#  cp -r ../$PACKAGE/debian .
+#fi
 
-autoreconf;
+#autoreconf;
+### end of temp disable
+
 dpkg-buildpackage -b $DPKG_DEPS_OPTION $DPKG_GNUPG_OPTION; #-v${VERSION}
 
 cd ..
