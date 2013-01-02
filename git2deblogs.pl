@@ -6,6 +6,28 @@ package Git::ToChangelog;
 
 =cut
 
+BEGIN {
+  use Carp;
+  sub try_load {
+    my $mod = shift;
+    eval("use $mod");
+    if ($@) {
+      #print "\$@ = $@\n";
+      return(0);
+    } else {
+      return(1);
+    }
+  };
+
+  if(!try_load("JSON::XS")) {
+    confess "[ERR] You don't have JSON::XS installed. Please install it using cpanm or   sudo aptitude install libjson-xs-perl";
+  };
+
+  if(`whereis dch | perl -ne 'chomp; s/^.*?://; print \$_ ? 0 : 1;'`) {
+    confess "[ERR] You don't have dch installed. Please install it using   sudo aptitude install devscripts";
+  };
+}
+
 use strict;
 use warnings;
 use Data::Dumper;
@@ -128,13 +150,20 @@ sub get_tag_info {
 # get all tag names in an array
 
   my @tags;
-  # get only tags of the form 
+  # get only tags of the following form
   #     \d+  or
   #     \d+.\d+ or
   #     \d+.\d+.\d+
   #     etc
 
   my @tag_names    = 
+    sort { 
+            my @A = split(/\./,$a); 
+            my @B = split(/\./,$b); 
+            $A[0] <=> $B[0] ||
+            $A[1] <=> $B[1] ||
+            $A[2] <=> $B[2]   
+         }
     grep { /^\d+(?:(?:\.\d+)+)$/ } 
     split /\n/,`git tag`;
 
@@ -153,7 +182,7 @@ sub get_tag_info {
   my @tag_end_commits = map { `git rev-list $_ | head -1` =~ /^([^\n]+)/  } @tag_names;
 
   push @tags, {
-    name  => $tag_names[0],
+    name  => $tag_names[0]      ,
     start => $all_tag_commits[0],
     end   => $tag_end_commits[0],
   };
@@ -164,6 +193,8 @@ sub get_tag_info {
   my $t = 1;
   #iterate through $all_tag_commits
   my $a = 0;
+
+  warn Dumper \@tag_names;
   while($t < @tag_names) {
     # find next end commit in @all_tag_commits
 
@@ -307,12 +338,15 @@ sub dch_create_new_version {
 
   my $maintainer = $self->get_tag_creation_commit_data($tag_name);
 
+  $package_name = lc($package_name);
+
   if($is_first_version) {
     my $maintainer_name  = $maintainer->{name} ;
     my $maintainer_email = $maintainer->{email};
     my $env_params = qq{NAME="$maintainer_name" EMAIL="$maintainer_email"};
     my $cmd = qq{  dch --create -v $tag_name --package "$package_name" "Created new $tag_name version from tag $tag_name"};
-    `$cmd`;
+    warn "[DBG] package name => [$package_name]";
+    system($cmd);
   } else {
     my $param_distribution = "";
     if($self->{distribution}) {
@@ -532,7 +566,7 @@ my $o = Git::ToChangelog->new($opt);
 #
 # 
 
-if($opt->{"distribution"} && 
+if(       $opt->{"distribution"} && 
    length $opt->{"distribution"} > 1) {
   $o->{distribution} = $opt->{distribution};
 };
