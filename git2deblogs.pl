@@ -66,7 +66,7 @@ use Git::LogLineDate;
  TODO: add switch to group commits by author  name
  TODO: add switch to just get the latest commits and not regenerate the whole thing from scratch
  TODO: drop dch altogether and write code that will do the same things as its doing(calling dch to update the changelog or create a new version
-       is proving to cause some massive delays)
+       is proving to cause some massive delays).
 
  
  BUG: seems to be missing the very first commit message(need to fix this)
@@ -186,8 +186,6 @@ sub get_tag_info {
     start => $all_tag_commits[0],
     end   => $tag_end_commits[0],
   };
-
-
 
   #iterate through $tag_names ( start at 1 because we already processed one tag just above )
   my $t = 1;
