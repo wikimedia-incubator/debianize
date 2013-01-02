@@ -202,10 +202,7 @@ echo "PACKAGE=$PACKAGE"
 dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
 
 
-
-#wget "https://raw.github.com/wmf-analytics/debianize/master/git2deblogs" -O git2deblogs;
-#mkdir debian;
-#chmod +x git2deblogs;
+#generate Changelog file
 #./git2deblogs --generate;
 
 #disable some weird cleaning
