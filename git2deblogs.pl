@@ -14,6 +14,7 @@ use Carp;
 use lib "./debianize/lib";
 use lib "./lib";
 use lib "../lib";
+use lib "../debianize/lib";
 use Git::LogLineDate;
 
 
