@@ -6,6 +6,19 @@ set -e
 set -o pipefail
 
 
+#make sure that dh_make is installed
+DH_MAKE_PATH=`which dh_make`;
+echo "[DBG] DH_MAKE_PATH=$DH_MAKE_PATH";
+if [ -z $DH_MAKE_PATH ]; then
+    echo "[ERROR] Please make sure that dh_make is installed";
+    exit 1;
+fi
+
+#make sure that a 'debian' folder is present
+if [ -d "$debian" ]; then
+    echo "[ERROR] Could not find the debian folder.";
+    exit 1;
+fi
 
 DPKG_GNUPG_OPTION=""
 DPKG_DEPS_OPTION=""
@@ -34,8 +47,9 @@ while getopts "d" optname
   done
 
 
-
-
+#Determine absolute path to debianize folder
+DEBIANIZE_PATH=$(perl -MCwd=abs_path -e '$p=abs_path("debianize.sh"); system("dirname \"$p\"");')
+echo "[DBG] DEBIANIZE_PATH=$DEBIANIZE_PATH";
 
 # Set env variables
 if [ -z "$DEBFULLNAME" ]; then
@@ -54,6 +68,12 @@ fi
 
 # Determine package
 # TODO: find a canonical way to get the repository name
+
+function upsearch () {
+    test / == "$PWD" && return || test -e "$1" && echo "[DBG] found: " "$PWD" && return || cd .. && upsearch "$1"
+}
+
+upsearch '.git';
 REPOSITORY_BASENAME=$(basename "$PWD")
 
 
@@ -102,13 +122,38 @@ FIRST_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+
 FINAL_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | head -1`
 REMOTE_URL=`git config --get remote.origin.url  | perl -ne '@url=split /\@/,$_; print $url[1];'`
 
-VERSION=`git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' `
-MAIN_VERSION=`git describe --abbrev=0`
+VERSION=`git describe | awk -F'-g[0-9a-fA-F]+' '{print $1}' | sed -e 's/\-/./g' ` || true
+MAIN_VERSION=`git describe --abbrev=0` || true
+
+# there are no tags containing version numbering, therefore we just hardcode it to 1.0
+if [ -z "$VERSION" ]; then
+    VERSION=1.0;
+fi
+
+if [ -z "$MAIN_VERSION" ]; then
+    MAIN_VERSION=1.0;
+fi
+
+echo "[DBG] VERSION=$VERSION";
+echo "[DBG] MAIN_VERSION=$MAIN_VERSION";
 
 PACKAGE=${PWD##*/}
-echo 'Building package for ' $PACKAGE
+echo 'Building package for '$PACKAGE
 
-tar -cvf $PACKAGE.tar --exclude-from=exclude . >/dev/null
+
+# We need to make sure that the exclude file at least exists
+# if it does not exist symlink to the one provided by the 
+# debianize repo. That exclude file has only one entry and that
+# says it should ignore the .git folder.
+if [ ! -f "exclude" ];
+then
+    echo "[DBG] Creating symlink to file exclude provide by debianize.";
+    EXCLUDE_PATH=$DEBIANIZE_PATH/exclude
+else
+    EXCLUDE_PATH=exclude
+fi
+
+tar -cvf $PACKAGE.tar --exclude-from=$EXCLUDE_PATH . >/dev/null
 mv $PACKAGE.tar ../
 cd ..
 rm -rf $PACKAGE-${VERSION}
@@ -127,7 +172,7 @@ echo 'Replacing version placeholders';
 # Replace version inside source files
 #
 VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' \
-                 `find -name "*.c" -or -name "*.h" -or -name "*.cpp" -or -name "*.h"`;
+                 `find . -name "*.c" -or -name "*.h" -or -name "*.cpp"`;
 
 # 
 # Replace version and package name inside configure.ac
@@ -143,7 +188,7 @@ echo "PACKAGE=$PACKAGE"
 
 
 # automate dh_make so it doesn't ask anymore questions
-yes | dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME || true
+yes | dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
 
 
 
