@@ -6,6 +6,35 @@ package Git::ToChangelog;
 
 =cut
 
+BEGIN {
+  use Carp;
+  sub try_load {
+    my $mod = shift;
+    eval("use $mod");
+    if ($@) {
+      #print "\$@ = $@\n";
+      return(0);
+    } else {
+      return(1);
+    }
+  };
+
+  if(!try_load("JSON::XS")) {
+    confess "
+[ERROR] You don't have JSON::XS installed. 
+  Solutions: 1) cpanm JSON::XS
+             2) sudo aptitude install libjson-xs-perl
+    \n";
+  };
+
+  if(`whereis dch | perl -ne 'chomp; s/^.*?://; print \$_ ? 0 : 1;'`) {
+    confess "
+[ERROR] You don't have dch installed. 
+  Solutions: 1) sudo aptitude install devscripts
+    \n";
+  };
+}
+
 use strict;
 use warnings;
 use Data::Dumper;
