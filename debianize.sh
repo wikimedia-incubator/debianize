@@ -40,8 +40,8 @@ while getopts "d" optname
       "d")
         echo "[!] Debug mode ON"
         echo "[!] Package will not be signed. Dependency check turned off"
-        DPKG_GNUPG_OPTION="-us"
-        DPKG_DEPS_OPTION="-d"
+        DPKG_GNUPG_OPTIONS="-us -uc"
+        DPKG_DEPS_OPTIONS="-d"
         ;;
       "?")
         echo "Option not recognized $OPTARG"
@@ -223,7 +223,7 @@ dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
 #autoreconf;
 ### end of temp disable
 
-dpkg-buildpackage -b $DPKG_DEPS_OPTION $DPKG_GNUPG_OPTION; #-v${VERSION}
+dpkg-buildpackage -b $DPKG_DEPS_OPTIONS $DPKG_GNUPG_OPTIONS; #-v${VERSION}
 
 cd ..
 
@@ -243,14 +243,14 @@ else
 fi
 
 
-PACKAGE_NAME_VERSION=$PACKAGE\_${VERSION}\_$ARCH_SYS.deb
-PACKAGE_NAME_MAIN_VERSION=$PACKAGE\_${MAIN_VERSION}\_${ARCH_SYS}.deb
+PACKAGE_NAME_VERSION=$PACKAGE\_${VERSION}-1\_$ARCH_SYS.deb
+PACKAGE_NAME_MAIN_VERSION=$PACKAGE\_${MAIN_VERSION}-1\_${ARCH_SYS}.deb
 
 
-dpkg-deb --contents ${PACKAGE_NAME_VERSION}
 echo "Currently in =>"`pwd`
 echo -e "Linting package ${PACKAGE_NAME_VERSION} ...\n"
-lintian -Ivi${PACKAGE_NAME_VERSION}
+dpkg-deb --contents ${PACKAGE_NAME_VERSION}
+lintian -Ivi ${PACKAGE_NAME_VERSION}
 #mv ${PACKAGE_NAME_MAIN_VERSION} ${PACKAGE_NAME_VERSION}
 
 
