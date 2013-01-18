@@ -5,6 +5,15 @@
 set -e
 set -o pipefail
 
+# Set env variables
+if [ -z "$DEBFULLNAME" ]; then
+  export DEBFULLNAME="Diederik van Liere"
+fi
+
+if [ -z "$DEBEMAIL" ]
+  then export DEBEMAIL="dvanliere@wikimedia.org"
+fi
+
 
 #make sure that dh_make is installed
 DH_MAKE_PATH=`which dh_make`;
@@ -24,11 +33,36 @@ if [ -z $AUTORECONF_PATH ]; then
     exit 1;
 fi
 
+# Determine package
+# TODO: find a canonical way to get the repository name
+
+function upsearch () {
+    test / == "$PWD" && return || test -e "$1" && echo "[DBG] found: " "$PWD" && return || cd .. && upsearch "$1"
+}
+
+upsearch '.git';
+REPOSITORY_BASENAME=$(basename "$PWD")
+
+
 #make sure that a 'debian' folder is present
 if [ -d "src/debian" ]; then
     echo "[ERROR] Could not find the debian folder.";
-    exit 1;
+    #exit 1;
 fi
+
+ARCHITECTURE=`uname -m`
+ARCH_i686="i386"
+ARCH_x86_64="amd64"
+ARCH_SYS=""
+
+if [ $ARCHITECTURE == "i686" ]; then
+  ARCH_SYS=$ARCH_i686
+elif [ $ARCHITECTURE == "x86_64" ]; then
+  ARCH_SYS="amd64"
+else
+  echo -e  "[ERROR] Sorry, only i686 and x86_64 architectures are supported.\n"
+  exit 1
+find
 
 DPKG_GNUPG_OPTION=""
 DPKG_DEPS_OPTION=""
@@ -69,48 +103,13 @@ while getopts "dc:l" optname
 DEBIANIZE_PATH=$(perl -MCwd=abs_path -e '$p=abs_path("debianize.sh"); system("dirname \"$p\"");')
 echo "[DBG] DEBIANIZE_PATH=$DEBIANIZE_PATH";
 
-# Set env variables
-if [ -z "$DEBFULLNAME" ]; then
-  export DEBFULLNAME="Diederik van Liere"
-fi
-
-#GO TO ROOT
-cd ..
-
-if [ ! -f "Makefile" ]; then
-  rm -f Makefile configure ;
-  aclocal         ;
-  autoconf        ;
-  autoreconf      ;
-  automake        ;
-  ./configure     ;
-fi
-
-# Determine package
-# TODO: find a canonical way to get the repository name
-
-function upsearch () {
-    test / == "$PWD" && return || test -e "$1" && echo "[DBG] found: " "$PWD" && return || cd .. && upsearch "$1"
-}
-
-upsearch '.git';
-REPOSITORY_BASENAME=$(basename "$PWD")
-
-
-if [ -z "$DEBEMAIL" ]
-	then export DEBEMAIL="dvanliere@wikimedia.org"
-fi
-
-
-
-
 PACKAGE=${PWD##*/}
-echo REPOSITORY_BASENAME is $REPOSITORY_BASENAME
-echo PACKAGE is $PACKAGE
+echo "[DBG] REPOSITORY_BASENAME=$REPOSITORY_BASENAME";
+echo "PACKAGE is $PACKAGE";
 if [ $REPOSITORY_BASENAME != $PACKAGE ]
 then
-	echo '[WARNING] Start debianize.sh either in the debianize folder or in the root of your git repository.';
-	exit 1;
+  echo '[WARNING] Start debianize.sh either in the debianize folder or in the root of your git repository.';
+  exit 1;
 fi
 
 if [ `whoami` != 'root' ]; then
@@ -123,19 +122,14 @@ fi
 
 if [ `git status | grep "Changed but not updated" |wc -l` == 0 ]
 then
-	echo 'Please be aware that you have uncommited changes in your git repo.'
-	echo 'Continuening with the building the Debian package means that your'
-	echo 'your package will not be entirely up-to-date.'
+  echo 'Please be aware that you have uncommited changes in your git repo.'
+  echo 'Continuening with the building the Debian package means that your'
+  echo 'your package will not be entirely up-to-date.'
 fi
-
-echo 'Building package for '$PACKAGE
 
 
 # TODO: check if the project uses automake/autoconf and if so then run the following commnds
 # in order to clean stuff up
-
-#./configure;
-#make clean;
 
 FIRST_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | tail -1`
 FINAL_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | head -1`
@@ -173,16 +167,17 @@ else
     EXCLUDE_PATH=exclude
 fi
 
-tar -cvf $PACKAGE.tar --exclude-from=$EXCLUDE_PATH . >/dev/null
-mv $PACKAGE.tar ../
-cd ..
-rm -rf $PACKAGE-${VERSION}
-mkdir  $PACKAGE-${VERSION}
-tar -C $PACKAGE-${VERSION} -xvf $PACKAGE.tar >/dev/null
+#GO TO ROOT
+# cd ..
 
-rm ${PACKAGE}\_${VERSION}.orig.tar.gz  2> /dev/null || true
-
-cd $PACKAGE-${VERSION}
+# if [ ! -f "Makefile" ]; then
+#   rm -f Makefile configure ;
+#   aclocal         ;
+#   autoconf        ;
+#   autoreconf      ;
+#   automake        ;
+#   ./configure     ;
+# fi
 
 # Replace version place holder with current version number
 echo `pwd`
@@ -200,6 +195,21 @@ VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' \
 #
 VERSION=$VERSION perl -pi -e 's/^VERSION=[^"]*$/VERSION=$ENV{VERSION}\n/' configure.ac;
 PACKAGE=$PACKAGE VERSION=$VERSION perl -pi -e 's/AC_INIT\(\[.*?\],\[.*?\]/AC_INIT([$ENV{PACKAGE}],[$ENV{VERSION}]/' configure.ac;
+
+
+echo 'Building package for '$PACKAGE
+
+tar -cvf $PACKAGE.tar --exclude-from=$EXCLUDE_PATH . >/dev/null
+mv $PACKAGE.tar ../
+cd ..
+rm -rf $PACKAGE-${VERSION}
+mkdir  $PACKAGE-${VERSION}
+tar -C $PACKAGE-${VERSION} -xvf $PACKAGE.tar >/dev/null
+
+rm ${PACKAGE}\_${VERSION}.orig.tar.gz  2> /dev/null || true
+
+cd $PACKAGE-${VERSION}
+
 
 echo 'Launching package builder';
 mkdir m4
@@ -242,26 +252,14 @@ if [ "$_CURRDIR" != "$PACKAGE" ]; then
   #cp -r ../$PACKAGE/debian .
 fi
 
-autoreconf;
+#autoreconf;
 ### end of temp disable
 
 
 #cd ..
 
 
-ARCHITECTURE=`uname -m`
-ARCH_i686="i386"
-ARCH_x86_64="amd64"
-ARCH_SYS=""
 
-if [ $ARCHITECTURE == "i686" ]; then
-  ARCH_SYS=$ARCH_i686
-elif [ $ARCHITECTURE == "x86_64" ]; then
-  ARCH_SYS="amd64"
-else
-  echo -e  "[ERROR] Sorry, only i686 and x86_64 architectures are supported.\n"
-  exit 1
-fi
 
 
 PACKAGE_NAME_VERSION=$PACKAGE\_${VERSION}-1\_$ARCH_SYS.deb
