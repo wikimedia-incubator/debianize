@@ -16,13 +16,13 @@ fi
 
 # TODO add check to verify that autoconf and libtoolize are installed
 #make sure that autoconf is installed
-#AUTORECONF_PATH=`which autoreconf`;
+AUTORECONF_PATH=`which autoreconf`;
 
-#echo "[DBG] AUTORECONF_PATH=$AUTORECONF_PATH";
-#if [ -z $AUTORECONF_PATH ]; then
-#    echo "[ERROR] Please make sure that autoconf is installed.";
-#    exit 1;
-#fi
+echo "[DBG] AUTORECONF_PATH=$AUTORECONF_PATH";
+if [ -z $AUTORECONF_PATH ]; then
+    echo "[ERROR] Please make sure that autoconf is installed.";
+    exit 1;
+fi
 
 #make sure that a 'debian' folder is present
 if [ -d "src/debian" ]; then
@@ -32,9 +32,9 @@ fi
 
 DPKG_GNUPG_OPTION=""
 DPKG_DEPS_OPTION=""
+DH_MAKE_OPTIONS="-c gpl2"
 
-
-while getopts "d" optname
+while getopts "dc:l" optname
   do
     case "$optname" in
       "d")
@@ -43,15 +43,23 @@ while getopts "d" optname
         DPKG_GNUPG_OPTIONS="-us -uc"
         DPKG_DEPS_OPTIONS="-d"
         ;;
+      "c")
+        echo "[DBG] License is $OPTARG"
+        DH_MAKE_OPTIONS="-c $OPTARG"
+        ;;
+      "l")
+        echo "[DBG] Deb package type is library"
+        DH_MAKE_OPTIONS="$DH_MAKE_OPTIONS -l"
+        ;;
       "?")
-        echo "Option not recognized $OPTARG"
+        echo "[ERROR] Option not recognized $OPTARG"
         ;;
       ":")
-        echo "Argument missing for option $OPTARG"
+        echo "[ERROR] Argument missing for option $OPTARG"
         ;;
       *)
       # Should not occur
-        echo "Unknown error while option processing"
+        echo "[ERROR] Unknown error while option processing"
         ;;
     esac
   done
@@ -66,6 +74,8 @@ if [ -z "$DEBFULLNAME" ]; then
   export DEBFULLNAME="Diederik van Liere"
 fi
 
+#GO TO ROOT
+cd ..
 
 if [ ! -f "Makefile" ]; then
   rm -f Makefile configure ;
@@ -99,14 +109,14 @@ echo REPOSITORY_BASENAME is $REPOSITORY_BASENAME
 echo PACKAGE is $PACKAGE
 if [ $REPOSITORY_BASENAME != $PACKAGE ]
 then
-	echo 'Start debianize.sh either in the debianize folder or in the root of your git repository.';
+	echo '[WARNING] Start debianize.sh either in the debianize folder or in the root of your git repository.';
 	exit 1;
 fi
 
 if [ `whoami` != 'root' ]; then
-  echo "Executing debianize.sh script"
+  echo "[DBG] Executing debianize.sh script"
 else
-  echo "Error: Executing debianize.sh as root not recommended"
+  echo "[ERROR]: Executing debianize.sh as root not recommended"
   exit 1
 fi
 
@@ -127,7 +137,6 @@ echo 'Building package for '$PACKAGE
 #./configure;
 #make clean;
 
-LICENSE=gpl2
 FIRST_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | tail -1`
 FINAL_COMMIT_DATE=`git log --pretty=format:"%H %ad" | perl -ne '/(\d+) ([+-]?\d+)$/ && print "$1\n"' | sort | uniq | head -1`
 REMOTE_URL=`git config --get remote.origin.url  | perl -ne '@url=split /\@/,$_; print $url[1];'`
@@ -177,7 +186,8 @@ cd $PACKAGE-${VERSION}
 
 # Replace version place holder with current version number
 echo `pwd`
-echo 'Replacing version placeholders';
+ABSOLUTE_PATH=`pwd`;
+echo '[DBG] Replacing version placeholders';
 
 #
 # Replace version inside source files
@@ -185,22 +195,34 @@ echo 'Replacing version placeholders';
 VERSION=$VERSION perl -pi -e 's/VERSION=".*";/VERSION="$ENV{VERSION}";/' \
                  `find . -name "*.c" -or -name "*.h" -or -name "*.cpp"`;
 
-# 
+#
 # Replace version and package name inside configure.ac
-# 
+#
 VERSION=$VERSION perl -pi -e 's/^VERSION=[^"]*$/VERSION=$ENV{VERSION}\n/' configure.ac;
 PACKAGE=$PACKAGE VERSION=$VERSION perl -pi -e 's/AC_INIT\(\[.*?\],\[.*?\]/AC_INIT([$ENV{PACKAGE}],[$ENV{VERSION}]/' configure.ac;
 
 echo 'Launching package builder';
 mkdir m4
 DH_MAKE_PKG_NAME=$PACKAGE\_${VERSION}
-echo "DH_MAKE_PKG_NAME=$DH_MAKE_PKG_NAME"
-echo "PACKAGE=$PACKAGE"
+echo "[DBG] DH_MAKE_PKG_NAME=$DH_MAKE_PKG_NAME"
+echo "[DBG] PACKAGE=$PACKAGE"
 
+
+
+#Locate Makefile location
+#MAKEFILE_PATH=$(find . -name "Makefile");
+#MAKEFILE_PATH=`dirname $MAKEFILE_PATH`;
+#cd $MAKEFILE_PATH;
+#echo "[DBG] MAKEFILE_PATH=$MAKEFILE_PATH";
 
 # automate dh_make so it doesn't ask anymore questions
-dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
-
+#yes | 
+dh_make $DH_MAKE_OPTIONS -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME || true
+cd $ABSOLUTE_PATH;
+cd $MAKEFILE_PATH;
+echo "$ABSOLUTE_PATH/$MAKEFILE_PATH";
+echo `pwd`;
+dpkg-buildpackage -b $DPKG_DEPS_OPTIONS $DPKG_GNUPG_OPTIONS; #-v${VERSION}
 
 #generate Changelog file
 #./git2deblogs --generate;
@@ -212,20 +234,19 @@ dh_make -s -c ${LICENSE} -e ${DEBEMAIL} --createorig -p $DH_MAKE_PKG_NAME
 #rm -rf changelog_backup/ || true
 #rm README.Debian dirs || true
 #cd ..
-#_CURRDIR=$(basename `pwd`)
+_CURRDIR=$(basename `pwd`)
 
-# Get debian/ from development directory
-#if [ "$_CURRDIR" != "$PACKAGE" ]; then
-#  rm -rf debian/
-#  cp -r ../$PACKAGE/debian .
-#fi
+#Get debian/ from development directory
+if [ "$_CURRDIR" != "$PACKAGE" ]; then
+  #rm -rf debian/
+  #cp -r ../$PACKAGE/debian .
+fi
 
-#autoreconf;
+autoreconf;
 ### end of temp disable
 
-dpkg-buildpackage -b $DPKG_DEPS_OPTIONS $DPKG_GNUPG_OPTIONS; #-v${VERSION}
 
-cd ..
+#cd ..
 
 
 ARCHITECTURE=`uname -m`
@@ -238,7 +259,7 @@ if [ $ARCHITECTURE == "i686" ]; then
 elif [ $ARCHITECTURE == "x86_64" ]; then
   ARCH_SYS="amd64"
 else
-  echo -e  "Sorry, only i686 and x86_64 architectures are supported.\n"
+  echo -e  "[ERROR] Sorry, only i686 and x86_64 architectures are supported.\n"
   exit 1
 fi
 
