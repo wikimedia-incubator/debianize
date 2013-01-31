@@ -51,11 +51,14 @@ The git2deblogs.pl has command-line paramters. Here are some examples of using t
 *    --force-maintainer-name="Person name"
 *    --force-maintainer-email="name@website.com"
 *    --consistency-check
+*    --wikimedia
 
 The --generate switch will backup your current changelog and will regenerate everything from scratch.
 The --force-maintainer-name and -email  will force these values inside the changelog (by default, these are taken 
 from the name/email of the person who made the git tag).
 The --consistency-check switch can be used when you're going to make a release to check your changelog and see if it's out of date or perform various consistency checks on it.
+The --wikimedia switch is to be used for building packages for Wikimedia infrastructure. This affects versions inside the debian changelog and the distribution names for the debian package.
+You can find [ more details about this here](http://wikitech.wikimedia.org/view/Reprepro#Importing_packages).
 
 
 build

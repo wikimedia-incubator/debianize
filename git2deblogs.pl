@@ -345,6 +345,11 @@ sub dch_create_new_version {
 
   $package_name = lc($package_name);
 
+  if($self->{wikimedia}) {
+    warn "[DBG] wikimedia !";
+    $tag_name .= "~".$self->{_distroname};
+  };
+
   if($is_first_version) {
     my $maintainer_name  = $maintainer->{name} ;
     my $maintainer_email = $maintainer->{email};
@@ -581,7 +586,9 @@ if(       $opt->{"distribution"} &&
 if( $opt->{wikimedia} ) {
   my $debian_distro = `lsb_release -s -c`;
   chomp $debian_distro;
-  $o->{distribution} = "$opt_pkgname-wikimedia";
+  $o->{_distroname}  = $debian_distro;
+  $o->{distribution} = "$debian_distro-wikimedia";
+  $o->{wikimedia} = 1;
 };
 
 
