@@ -40,7 +40,12 @@ if [ -z $MACHINE -o $MACHINE == "" ]; then
 fi
 
 function run_git2deblogs {
-  ./git2deblogs.pl --generate --wikimedia --distribution="$DISTRO-wikimedia" --force-maintainer-name="Diederik van Liere" --force-maintainer-email=dvanliere@wikimedia.org
+  ./git2deblogs.pl --generate                                         \
+                   $@                                                 \
+                   --wikimedia                                        \
+                   --distribution="$DISTRO-wikimedia"                 \
+                   --force-maintainer-name="Diederik van Liere"       \
+                   --force-maintainer-email=dvanliere@wikimedia.org
 }
 
 echo "Building on machine [$MACHINE] with distro [$DISTRO]..."
@@ -66,7 +71,7 @@ pushd .
 
 #### udp-filters       #####
 cd ../udp-filters;
-run_git2deblogs;
+run_git2deblogs --package-name="udp-filter";
 rm -rf .deps/ configure Makefile;
 autoconf;
 automake --add-missing;

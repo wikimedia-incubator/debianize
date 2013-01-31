@@ -506,6 +506,7 @@ sub get_options {
     "force-maintainer-name"  => undef,
     "force-maintainer-email" => undef,
     "verbose"                => undef,
+    "package-name"           => undef,
     "wikimedia"              => undef,
   };
 
@@ -517,6 +518,7 @@ sub get_options {
     "verbose"                  => \$opt->{"verbose"}                ,
     "consistency-check"        => \$opt->{"consistency-check"}      ,
     "distribution=s"           => \$opt->{"distribution"}           ,
+    "package-name=s"           => \$opt->{"package-name"}           ,
     "wikimedia"                => \$opt->{"wikimedia"}              ,
   );
 
@@ -593,11 +595,11 @@ if( $opt->{wikimedia} ) {
 
 
 if($opt->{generate}) {
-  my $opt_pkgname = `basename \`pwd\``;
-  chomp $opt_pkgname;
+  my $pkgname = $opt->{"package-name"} // `basename \`pwd\``;
+  chomp $pkgname;
 
-  $opt_pkgname = "\"$opt_pkgname\"";
-  print "$opt_pkgname\n";
-  $o->dch_init_changelog($opt_pkgname);
+  $pkgname = "\"$pkgname\"";
+  print "$pkgname\n";
+  $o->dch_init_changelog($pkgname);
 };
 
