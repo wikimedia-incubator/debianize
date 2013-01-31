@@ -501,6 +501,7 @@ sub get_options {
     "force-maintainer-name"  => undef,
     "force-maintainer-email" => undef,
     "verbose"                => undef,
+    "wikimedia"              => undef,
   };
 
   GetOptions(
@@ -511,6 +512,7 @@ sub get_options {
     "verbose"                  => \$opt->{"verbose"}                ,
     "consistency-check"        => \$opt->{"consistency-check"}      ,
     "distribution=s"           => \$opt->{"distribution"}           ,
+    "wikimedia"                => \$opt->{"wikimedia"}              ,
   );
 
 
@@ -576,12 +578,19 @@ if(       $opt->{"distribution"} &&
   $o->{distribution} = $opt->{distribution};
 };
 
+if( $opt->{wikimedia} ) {
+  my $debian_distro = `lsb_release -s -c`;
+  chomp $debian_distro;
+  $o->{distribution} = "$opt_pkgname-wikimedia";
+};
+
+
 if($opt->{generate}) {
   my $opt_pkgname = `basename \`pwd\``;
   chomp $opt_pkgname;
+
   $opt_pkgname = "\"$opt_pkgname\"";
   print "$opt_pkgname\n";
   $o->dch_init_changelog($opt_pkgname);
 };
-
 

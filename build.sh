@@ -19,7 +19,11 @@ DISTRO=$(lsb_release -c | perl -ne "s/Codename:\s+//; print")
 MACHINE=$(cat /etc/wmflabs-instancename 2>/dev/null || cat /etc/hostname)
 SOURCE_DIR=wikistats/
 
-if [ $MACHINE != "build1" -a $MACHINE != "build2" -a $MACHINE != "garage" ]; then
+if [ $MACHINE != "build1" -a \
+     $MACHINE != "build2" -a \
+     $MACHINE != "garage" -a \
+     $MACHINE != "user-Inspiron-3520" \
+     ]; then
   echo "Not running on the right machine (please check the machine you're running this on).";
   echo "Please switch either and run from there.";
   exit 0;
@@ -36,7 +40,7 @@ if [ -z $MACHINE -o $MACHINE == "" ]; then
 fi
 
 function run_git2deblogs {
-  ./git2deblogs.pl --generate --distribution="$DISTRO-wikimedia" --force-maintainer-name="Diederik van Liere" --force-maintainer-email=dvanliere@wikimedia.org
+  ./git2deblogs.pl --generate --wikimedia --distribution="$DISTRO-wikimedia" --force-maintainer-name="Diederik van Liere" --force-maintainer-email=dvanliere@wikimedia.org
 }
 
 echo "Building on machine [$MACHINE] with distro [$DISTRO]..."
@@ -48,23 +52,25 @@ cd $HOME;
 cd $SOURCE_DIR;
 pushd .
 
-#### libanon           #####
-cd libanon;
-dpkg-buildpackage;
+##### libanon           #####
+#cd libanon;
+#run_git2deblogs;
 
-#### libcidr           #####
-cd ../libcidr;
-dpkg-buildpackage;
+##### libcidr           #####
+#cd ../libcidr;
+#run_git2deblogs;
 
-#### webstatscollector #####
-cd ../webstatscollector;
-run_git2deblogs;
-./debianize.sh;
+##### webstatscollector #####
+#cd ../webstatscollector;
+#run_git2deblogs;
 
 #### udp-filters       #####
 cd ../udp-filters;
 run_git2deblogs;
-./debianize.sh;
+rm -rf .deps/ configure Makefile;
+autoconf;
+automake --add-missing;
+dpkg-buildpackage;
 
 popd;
 echo "[Moving files to $HOME/$DISTRO/]";
