@@ -6,6 +6,12 @@ package Git::ToChangelog;
 
 =cut
 
+
+# these constants are prefixed with "pat" to reflect that they are patterns
+# which are used inside regexes
+our $pat_version          = '(\d+(?:(?:\.\d+)+))';
+our $pat_possible_distros = '(?:wikimedia-)?(?:maverick|precise|lucid|squeeze|UNRELEASED)';
+
 BEGIN {
   use Carp;
   sub try_load {
@@ -44,6 +50,7 @@ use lib "./debianize/lib";
 use lib "./lib";
 use lib "../lib";
 use Git::LogLineDate;
+use Git::Util;
 
 
 =begin
@@ -164,13 +171,7 @@ sub get_tag_info {
   #     etc
 
   my @tag_names    = 
-    sort { 
-            my @A = split(/\./,$a); 
-            my @B = split(/\./,$b); 
-            $A[0] <=> $B[0] ||
-            $A[1] <=> $B[1] ||
-            $A[2] <=> $B[2]   
-         }
+    sort { Git::Util->compare_versions($a,$b) }
     grep { /^\d+(?:(?:\.\d+)+)$/ } 
     split /\n/,`git tag`;
 
@@ -199,7 +200,7 @@ sub get_tag_info {
   #iterate through $all_tag_commits
   my $a = 0;
 
-  warn Dumper \@tag_names;
+  #warn Dumper \@tag_names;
   while($t < @tag_names) {
     # find next end commit in @all_tag_commits
 
@@ -386,9 +387,6 @@ sub dch_add_maintainer_details {
   # this function should be run after all the commits in that tag have been added.
   # this is because 
 
-
-
-
   my $cmd_template = q{TZ='\"\";echo \"[MAINTAINER_TAG_CREATION_DATE]\"; #' EMAIL="[MAINTAINER_EMAIL]"  NAME="[MAINTAINER_NAME]" dch -a "[MAINTAINER_TAG_MESSAGE]";};
   my $cmd_rendered = $cmd_template;
 
@@ -432,14 +430,16 @@ sub dch_add_maintainer_details {
  Warning: only use this for the first time you want to make the changelog
 =cut
 
-sub dch_init_changelog {
+use Data::Dumper;
+
+sub generate {
   my ($self,$package_name) = @_;
 
   # get all the tags that conform to common versioning schemes
   my @tags = $self->get_tag_info();
+
   my $backup_timestamp = `date +%m-%d-%y_%H-%M-%S`;
   chomp $backup_timestamp; 
-
 
   # backup changelog if it already exists
   if(-f "debian/changelog") {
@@ -489,7 +489,61 @@ sub dch_init_changelog {
   };
 };
 
+sub update {
+  my ($self,$pkgname) = @_;
+  croak "[ERROR] debian/changelog was supposed to exist already. Run --generate first." unless -f "debian/changelog";
+  open my $fh, "<./debian/changelog";
+  my $pkgname_without_quotes = $pkgname;
+  my $latest_release_tag     = undef;
+  my $debian_log_line        = undef;
+  $pkgname_without_quotes =~ s/"//g;
 
+  while( !defined($latest_release_tag)) {
+    last unless defined($debian_log_line=<$fh>);
+    if($debian_log_line =~ /limn \($pat_version\) $pat_possible_distros; urgency=/) {
+      $latest_release_tag = $1;
+    };
+  };
+  close $fh;
+  warn "[DBG] latest tag => $latest_release_tag";
+
+  # now get all tags which are after the biggest tag in the current changelog
+  my @tags = grep { Git::Util->compare_versions($_->{name},$latest_release_tag) == 1 } $self->get_tag_info();
+  if(@tags == 0) {
+    print "[WARN] Nothing to update\n";
+    return;
+  };
+  warn "[DBG] Will update the following tags:";
+  warn Dumper \@tags;
+
+  # iterate over all tags
+  for my $tag_idx (0..(-1+@tags)) {
+    my $tag = $tags[$tag_idx];
+    print "Sync-ing commits for $tag->{name} ... \n";
+    #get the commits for that tag(only the ones made between the last tag and this one)
+
+    my $tag_commits;
+
+    if($tag->{start} ne $tag->{end}) {
+      $tag_commits = $self->git_log_to_array($tag->{start},$tag->{end});
+    } else {
+      $tag_commits = $self->git_log_to_array($tag->{start});
+    };
+
+    # create a new version in the changelog
+    $self->dch_create_new_version($tag->{name},0,$pkgname);
+
+    for my $commit(@$tag_commits) {
+      # add each commit of the tag to the debian/changelog
+      my $changelog_message = "$commit->{message} [ $commit->{author} ]";
+      print "changelog_msg=$changelog_message\n";
+      $self->dch_append_commit($commit);
+    };
+
+    $self->dch_add_maintainer_details($tag->{name});
+  };
+
+};
 
 package main;
 use Carp;
@@ -525,16 +579,17 @@ sub get_options {
 
   if(!$opt->{"generate"}            && 
      !$opt->{"update"}              &&
-     !$opt->{"consistency-check"}   
+     !$opt->{"consistency-check"}   &&
+     !$opt->{"update"}            
    ) {
     die   "Error: One of the following options is mandatory\n".
           "                                                \n".
           "        --generate                              \n".
           "        --update                                \n".
-          "        --consistency-check                     \n";
+          "        --consistency-check                     \n".
+          "        --update                                \n";
   };
-
-  # adding RFC822PAT later,
+# adding RFC822PAT later,
   # this will do for the moment
   if($opt->{"force-maintainer-email"} ) {
     if($opt->{"force-maintainer-email"} !~ /.*\@.*\..*/) {
@@ -593,13 +648,17 @@ if( $opt->{wikimedia} ) {
   $o->{wikimedia} = 1;
 };
 
+my $pkgname = $opt->{"package-name"} // `basename \`pwd\``;
+chomp $pkgname;
+$pkgname = "\"$pkgname\"";
+print "$pkgname\n";
 
 if($opt->{generate}) {
-  my $pkgname = $opt->{"package-name"} // `basename \`pwd\``;
-  chomp $pkgname;
-
-  $pkgname = "\"$pkgname\"";
-  print "$pkgname\n";
-  $o->dch_init_changelog($pkgname);
+  $o->generate($pkgname);
 };
+
+if($opt->{update}) {
+  $o->update($pkgname);
+};
+
 
