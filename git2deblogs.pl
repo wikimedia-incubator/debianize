@@ -352,10 +352,14 @@ sub dch_create_new_version {
   };
 
   if($is_first_version) {
+    my $param_distribution = "";
+    if($self->{distribution}) {
+      $param_distribution = "--force-distribution -D \"$self->{distribution}\"";
+    };
     my $maintainer_name  = $maintainer->{name} ;
     my $maintainer_email = $maintainer->{email};
     my $env_params = qq{NAME="$maintainer_name" EMAIL="$maintainer_email"};
-    my $cmd = qq{  dch --create -v $tag_name --package "$package_name" "Created new $tag_name version from tag $tag_name"};
+    my $cmd = qq{  dch --create -v $tag_name $param_distribution --package "$package_name" "Created new $tag_name version from tag $tag_name"};
     warn "[DBG] package name => [$package_name]";
     system($cmd);
   } else {
@@ -500,12 +504,13 @@ sub update {
 
   while( !defined($latest_release_tag)) {
     last unless defined($debian_log_line=<$fh>);
-    if($debian_log_line =~ /limn \($pat_version\) $pat_possible_distros; urgency=/) {
+    if($debian_log_line =~ /$pkgname_without_quotes\s\($pat_version\)\s/) {
       $latest_release_tag = $1;
     };
   };
   close $fh;
-  warn "[DBG] latest tag => $latest_release_tag";
+
+  croak "[ERROR] No tag respecting the rules was found in debian/changelog" unless defined($latest_release_tag);
 
   # now get all tags which are after the biggest tag in the current changelog
   my @tags = grep { Git::Util->compare_versions($_->{name},$latest_release_tag) == 1 } $self->get_tag_info();
@@ -513,8 +518,8 @@ sub update {
     print "[WARN] Nothing to update\n";
     return;
   };
-  warn "[DBG] Will update the following tags:";
-  warn Dumper \@tags;
+  print "[DBG] Will update the following tags:";
+  print Dumper \@tags;
 
   # iterate over all tags
   for my $tag_idx (0..(-1+@tags)) {

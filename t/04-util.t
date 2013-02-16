@@ -13,4 +13,7 @@ is(Git::Util->compare_versions("0.1"   , "0.1.1") , -1 , "0.1   <  0.1.1");
 is(Git::Util->compare_versions("0.1.1" , "0.1")   , +1 , "0.1.1 >  0.1  ");
 is(Git::Util->compare_versions("0.1.2" , "0.1.1") , +1 , "0.1.2 >  0.1.1");
 
+is(Git::Util->compare_versions("0.2.1" , "0.2") , +1 , "0.2.1 > 0.2");
+
+
 done_testing;

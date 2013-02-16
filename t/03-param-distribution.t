@@ -41,6 +41,7 @@ sub count_line_with_pattern {
   return $count;
 }
 
+package main;
 use strict;
 use warnings;
 use Test::More 'no_plan';
