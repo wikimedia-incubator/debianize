@@ -11,3 +11,4 @@ debianize.sh
 git2deblogs.pl
 prepare-release
 gpl-2.0.txt
+build.sh
