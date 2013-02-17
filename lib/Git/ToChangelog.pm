@@ -7,6 +7,7 @@ use warnings;
 
 =cut
 
+our $VERSION = "0.5";
 
 # these constants are prefixed with "pat" to reflect that they are patterns
 # which are used inside regexes
