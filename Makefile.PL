@@ -2,6 +2,7 @@ use 5.014002;
 use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
+# test1
 WriteMakefile(
     NAME              => 'Git::ToChangelog',
     VERSION_FROM      => 'lib/Git/ToChangelog.pm', # finds $VERSION
