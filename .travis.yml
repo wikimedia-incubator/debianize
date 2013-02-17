@@ -9,4 +9,4 @@ before_install:
    - sudo apt-get update  -qq
    - sudo apt-get install -qq libjson-xs-perl devscripts git-core debhelper
    - git config --global user.email "test@test.com"
-   - git config --global user.email "Mr Test"
+   - git config --global user.name "Mr Test"
