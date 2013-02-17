@@ -1,0 +1,13 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/*
+lib/Git/ToChangelog.pm
+lib/Git/ConsistencyCheck.pm
+lib/Git/LogLineDate.pm
+lib/Git/Util.pm
+debianize.sh
+git2deblogs.pl
+prepare-release
+gpl-2.0.txt
