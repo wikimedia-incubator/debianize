@@ -77,3 +77,18 @@ Because this is under development and continous evolution, run this from time to
 Continous integration available here:
 
 http://www.garage-coding.com:8010/builders/git2deblogs-builder
+
+
+
+Travis CI
+---------
+
+Status of github.com/wsdookadr/debianize.git
+
+![Alt](https://travis-ci.org/wsdookadr/debianize.png)
+
+
+Status of github.com/wikimedia-incubator/debianize.git
+
+![Alt](https://travis-ci.org/wikimedia-incubator/debianize.png)
+
