@@ -506,7 +506,7 @@ sub update {
 
   while( !defined($latest_release_tag)) {
     last unless defined($debian_log_line=<$fh>);
-    if($debian_log_line =~ /$pkgname_without_quotes\s\($pat_version\)\s/) {
+    if($debian_log_line =~ /$pkgname_without_quotes\s\($pat_version(?:\s|~)/) {
       $latest_release_tag = $1;
     };
   };
