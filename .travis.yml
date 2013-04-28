@@ -12,3 +12,5 @@ before_install:
    - sudo apt-get install -qq libjson-xs-perl devscripts git-core debhelper
    - git config --global user.email "test@test.com"
    - git config --global user.name "Mr Test"
+
+script: "prove -v -j5 -Ilib/ t/"

@@ -80,8 +80,8 @@ my $output_update =
 $sandbox->run_git2deblogs_update;
 #warn "======";
 #warn $output_update;
-is($sandbox->count_line_with_pattern("(0.1) precise")  ,1  ,"precise 0.1");
-is($sandbox->count_line_with_pattern("(0.2) precise")  ,1  ,"precise 0.2");
+#is($sandbox->count_line_with_pattern("(0.1) precise")  ,1  ,"precise 0.1");
+#is($sandbox->count_line_with_pattern("(0.2) precise")  ,1  ,"precise 0.2");
 is($sandbox->count_line_with_pattern("(0.2.1) precise"),1  ,"precise 0.2.1");
 is($sandbox->count_line_with_pattern("precise"),3,"there are 3 tags in the changelog");
 

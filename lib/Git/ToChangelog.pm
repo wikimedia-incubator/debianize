@@ -498,15 +498,15 @@ sub generate {
 sub update {
   my ($self,$pkgname) = @_;
   croak "[ERROR] debian/changelog was supposed to exist already. Run --generate first." unless -f "debian/changelog";
-  open my $fh, "<./debian/changelog";
   my $pkgname_without_quotes = $pkgname;
   my $latest_release_tag     = undef;
   my $debian_log_line        = undef;
   $pkgname_without_quotes =~ s/"//g;
 
+  open my $fh, "<./debian/changelog";
   while( !defined($latest_release_tag)) {
     last unless defined($debian_log_line=<$fh>);
-    if($debian_log_line =~ /$pkgname_without_quotes\s\($pat_version(?:\s|~)/) {
+    if($debian_log_line =~ /$pkgname_without_quotes\s\($pat_version\)(?:\s|~)/) {
       $latest_release_tag = $1;
     };
   };
