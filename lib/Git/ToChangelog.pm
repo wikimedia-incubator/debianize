@@ -344,6 +344,8 @@ sub get_tag_creation_commit_data {
 sub dch_create_new_version {
   my ($self,$tag_name,$is_first_version,$package_name) = @_;
 
+  warn "[DBG] NEW VERSION !!!!";
+
   my $maintainer = $self->get_tag_creation_commit_data($tag_name);
 
   $package_name = lc($package_name);
@@ -364,6 +366,7 @@ sub dch_create_new_version {
     my $cmd = qq{  dch --create -v $tag_name $param_distribution --package "$package_name" "Created new $tag_name version from tag $tag_name"};
     warn "[DBG] package name => [$package_name]";
     system($cmd);
+    system("NAME=\"$maintainer->{name}\" dch -r \"Releasing $param_version\");
   } else {
     my $param_distribution = "";
     if($self->{distribution}) {
@@ -372,6 +375,7 @@ sub dch_create_new_version {
     my $param_version = qq{--newversion "$tag_name"};
     my $param_message = qq{"Created new $tag_name version from tag $tag_name"};
     `NAME="$maintainer->{name}" dch $param_version $param_message $param_distribution;`
+    system("NAME=\"$maintainer->{name}\" dch -r \"Releasing $param_version\");
   };
 };
 
