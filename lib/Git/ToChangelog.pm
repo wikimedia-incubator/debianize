@@ -252,7 +252,7 @@ sub git_log_to_array {
     croak "Error: Wrong number of params to git_log_to_array";
   };
 
-  print "$git_log_cmd\n";
+  #print "$git_log_cmd\n";
 
   my $git_log_output =  `$git_log_cmd`;
   $git_log_output=~s/},\s*$/}/;
@@ -344,7 +344,7 @@ sub get_tag_creation_commit_data {
 sub dch_create_new_version {
   my ($self,$tag_name,$is_first_version,$package_name) = @_;
 
-  warn "[DBG] NEW VERSION !!!!";
+  #warn "[DBG] NEW VERSION !!!!";
 
   my $maintainer = $self->get_tag_creation_commit_data($tag_name);
 
@@ -415,9 +415,9 @@ sub dch_add_maintainer_details {
 
 
   #fix date(convert from "git show" format to debian/changelog format
-  print "[!!] BEFORE: ".$maintainer->{date}."\n";
+  #print "[!!] BEFORE: ".$maintainer->{date}."\n";
   $maintainer->{date} = Git::LogLineDate::git_to_changelog($maintainer->{date});
-  print "[!!] AFTER:  ".$maintainer->{date}."\n";
+  #print "[!!] AFTER:  ".$maintainer->{date}."\n";
 
 
   $cmd_rendered =~ s/\[MAINTAINER_TAG_CREATION_DATE\]/$maintainer->{date}/;
@@ -547,7 +547,7 @@ sub update {
     for my $commit(@$tag_commits) {
       # add each commit of the tag to the debian/changelog
       my $changelog_message = "$commit->{message} [ $commit->{author} ]";
-      print "changelog_msg=$changelog_message\n";
+      #print "changelog_msg=$changelog_message\n";
       $self->dch_append_commit($commit);
     };
 
